@@ -1,0 +1,840 @@
+#!/usr/bin/env bash
+
+# Name:         calico (Cli for Armbian Linux Image COnfiguration)
+# Version:      0.5.6
+# Release:      1
+# License:      CC-BA (Creative Commons By Attribution)
+#               http://creativecommons.org/licenses/by/4.0/legalcode
+# Group:        System
+# Source:       N/A
+# URL:          https://github.com/lateralblast/just
+# Distribution: UNIX
+# Vendor:       UNIX
+# Packager:     Richard Spindler <richard@lateralblast.com.au>
+# Description:  A template for writing shell scripts
+
+# Insert some shellcheck disables
+# Depending on your requirements, you may want to add/remove disables
+# shellcheck disable=SC2034
+# shellcheck disable=SC1090
+# shellcheck disable=SC2129
+
+# Create arrays
+
+declare -A os
+declare -A script
+declare -A options 
+declare -A defaults
+declare -a options_list
+declare -a actions_list
+
+# Grab script information and put it into an associative array
+
+script['args']="$*"
+script['file']="$0"
+script['name']="calico"
+script['file']=$( realpath "${script['file']}" )
+script['path']=$( dirname "${script['file']}" )
+script['modulepath']="${script['path']}/modules"
+script['bin']=$( basename "${script['file']}" )
+
+# Function: set_defaults
+#
+# Set defaults
+
+set_defaults () {
+  options['workdir']="${HOME}/${script['name']}"      # option : Work directory
+  options['connectwireless']="y"                      # option : Connect to wireless
+  options['userpassword']="armbian"                   # option : User password
+  options['rootpassword']="armbian"                   # option : Root password
+  options['countrycode']="AU"                         # option : Country code
+  options['builddir']="${options['workdir']}/build"   # option : Build directory
+  options['ethernet']="0"                             # option : Ethernet
+  options['username']="armbian"                       # option : Username
+  options['timezone']="Australia/Melbourne"           # option : Timezone
+  options['realname']="Armbian"                       # option : Real name
+  options['netmask']="255.255.255.0"                  # option : Netmask
+  options['verbose']="false"                          # option : Verbose mode
+  options['gateway']=""                               # option : Gateway
+  options['setlang']="y"                              # option : Set language based on location
+  options['default']="false"                          # option : Default mode
+  options['locale']="en_AU.UTF-8"                     # option : Locale
+  options['strict']="false"                           # option : Strict mode
+  options['import']="false"                           # option : Import mode
+  options['dryrun']="false"                           # option : Dryrun mode
+  options['debug']="false"                            # option : Debug mode
+  options['force']="false"                            # option : Force actions
+  options['ssid']="SSID"                              # option : WiFi SSID
+  options['shell']="bash"                             # option : User shell
+  options['wifi']="0"                                 # option : WiFi 
+  options['mask']="false"                             # option : Mask identifiers
+  options['dns']="8.8.8.8"                            # option : DNS
+  options['yes']="false"                              # option : Answer yes to questions
+  options['key']="KEY"                                # option : WiFi Key
+  options['ip']=""                                    # option : IP
+  os['name']=$( uname -s )
+  if [ "${os['name']}" = "Linux" ]; then
+    lsb_check=$( command -v lsb_release )
+    if [ -n "${lsb_check}" ]; then 
+      os['distro']=$( lsb_release -i -s 2 | sed 's/"//g' > /dev/null )
+    else
+      os['distro']=$( hostnamectl | grep "Operating System" | awk '{print $3}' )
+    fi
+  fi
+}
+
+set_defaults
+
+# Function: print_message
+#
+# Print message
+
+print_message () {
+  message="$1"
+  format="$2"
+  if [ "${format}" = "verbose" ]; then
+    echo "${message}"
+  else
+    if [[ "${format}" =~ warn ]]; then
+      echo -e "Warning:\t${message}"
+    else
+      if [ "${options['verbose']}" = "true" ]; then
+        if [[ "${format}" =~ ing$ ]]; then
+          format="${format^}"
+        else
+          if [[ "${format}" =~ t$ ]]; then
+            if [ "${format}" = "test" ]; then
+              format="${format}ing"
+            else
+              format="${format^}ting"
+            fi
+          else
+            if [[ "${format}" =~ e$ ]]; then
+              if [[ ! "${format}" =~ otice ]]; then
+                format="${format::-1}"
+                format="${format^}ing"
+              fi
+            fi
+          fi
+        fi 
+        format="${format^}"
+        length="${#format}"
+        if [ "${length}" -lt 7 ]; then
+          tabs="\t\t"
+        else
+          tabs="\t"
+        fi
+        echo -e "${format}:${tabs}${message}"
+      fi
+    fi
+  fi
+}
+
+# Function: verbose_message
+#
+# Verbose message
+
+verbose_message () {
+  message="$1"
+  print_message "${message}" "verbose"
+}
+
+# Function: warning_message
+#
+# Warning message
+
+warning_message () {
+  message="$1"
+  print_message "${message}" "warn"
+}
+
+# Function: execute_message
+#
+#  Print command
+
+execute_message () {
+  message="$1"
+  print_message "${message}" "execute"
+}
+
+# Function: notice_message
+#
+# Notice message
+
+notice_message () {
+  message="$1"
+  verbose_message "${message}" "notice"
+}
+
+# Function: notice_message
+#
+# Information Message
+
+information_message () {
+  message="$1"
+  verbose_message "${message}" "info"
+}
+
+# Load modules
+
+if [ -d "${script['modulepath']}" ]; then
+  modules=$( find "${script['modulepath']}" -name "*.sh" )
+  for module in ${modules}; do
+    if [[ "${script['args']}" =~ "verbose" ]]; then
+     print_message "Module ${module}" "load"
+    fi
+    . "${module}"
+  done
+fi
+
+# Function: reset_defaults
+#
+# Reset defaults based on command line options
+
+reset_defaults () {
+  defaults['firstrun']="${options['builddir']}/userpatches/extensions/preset-firstrun.sh"
+  if [ "${options['firstrun']}" = "" ]; then
+    options['firstrun']="${defaults['firstrun']}"
+  fi
+  if [ "${options['debug']}" = "true" ]; then
+    print_message "Enabling debug mode" "notice"
+    set -x
+  fi
+  if [ "${options['strict']}" = "true" ]; then
+    print_message "Enabling strict mode" "notice"
+    set -u
+  fi
+  if [ "${options['dryrun']}" = "true" ]; then
+    print_message "Enabling dryrun mode" "notice"
+  fi
+}
+
+# Function: do_exit
+#
+# Selective exit (don't exit when we're running in dryrun mode)
+
+do_exit () {
+  if [ "${options['dryrun']}" = "false" ]; then
+    exit
+  fi
+}
+
+# Function: check_value
+#
+# check value (make sure that command line arguments that take values have values)
+
+check_value () {
+  param="$1"
+  value="$2"
+  if [[ ${value} =~ ^-- ]]; then
+    print_message "Value '$value' for parameter '$param' looks like a parameter" "verbose"
+    echo ""
+    if [ "${options['force']}" = "false" ]; then
+      do_exit
+    fi
+  else
+    if [ "${value}" = "" ]; then
+      print_message "No value given for parameter $param" "verbose"
+      echo ""
+      if [[ "${param}" =~ "option" ]]; then
+        print_options
+      else
+        if [[ "${param}" =~ "action" ]]; then
+          print_actions
+        else
+          print_help
+        fi
+      fi
+      exit
+    fi
+  fi
+}
+
+# Function: execute_command
+#
+# Execute command
+
+execute_command () {
+  command="$1"
+  privilege="$2"
+  if [[ "${privilege}" =~ su ]]; then
+    command="sudo sh -c \"${command}\""
+  fi
+  if [ "${options['verbose']}" = "true" ]; then
+    execute_message "${command}"
+  fi
+  if [ "${options['dryrun']}" = "false" ]; then
+    eval "${command}"
+  fi
+}
+
+# Function: print_info
+#
+# Print information
+
+print_info () {
+  info="$1"
+  echo ""
+  echo "Usage: ${script['bin']} --action(s) [action(,action)] --option(s) [option(,option)]"
+  echo ""
+  if [[ ${info} =~ switch ]]; then
+    echo "${info}(es):"
+    echo "-----------"
+  else
+    echo "${info}(s):"
+    echo "----------"
+  fi
+  while read -r line; do
+    if [[ "${line}" =~ .*"# ${info}".* ]]; then
+      if [[ "${info}" =~ option ]]; then
+        IFS=':' read -r param desc <<< "${line}"
+        IFS=']' read -r param default <<< "${param}"
+        IFS='[' read -r _ param <<< "${param}"
+        param="${param//\'/}"
+        default="${options[${param}]}"
+        if [ "${param}" = "mask" ]; then
+          default="false"
+        else
+          if [ "${options['mask']}" = "true" ]; then
+            default="${default/${script['user']}/user}"
+          fi
+        fi
+        param="${param} (default = ${default})"
+      else
+        IFS='#' read -r param desc <<< "${line}"
+        desc="${desc/${info} :/}"
+      fi
+      echo "${param}"
+      echo "  ${desc}"
+    fi
+  done < "${script['file']}"
+  echo ""
+}
+
+# Function: print_help
+#
+# Print help/usage insformation
+
+print_help () {
+  print_info "switch"
+}
+
+# Function print_actions
+#
+# Print actions
+
+print_actions () {
+  print_info "action"
+}
+
+# Function: print_options
+#
+# Print options
+
+print_options () {
+  print_info "option"
+}
+
+# Function: print_usage
+#
+# Print Usage
+
+print_usage () {
+  usage="$1"
+  case $usage in
+    all|full)
+      print_help
+      print_actions
+      print_options
+      ;;
+    help)
+      print_help
+      ;;
+    action*)
+      print_actions
+      ;;
+    option*)
+      print_options
+      ;;
+    *)
+      print_help
+      shift
+      ;;
+  esac
+}
+
+# Function: print_version
+#
+# Print version information
+
+print_version () {
+  script['version']=$( grep '^# Version' < "$0" | awk '{print $3}' )
+  echo "${script['version']}"
+}
+
+# Function: check_shellcheck
+#
+# Run Shellcheck
+
+check_shellcheck () {
+  bin_test=$( command -v shellcheck | grep -c shellcheck )
+  if [ ! "$bin_test" = "0" ]; then
+    shellcheck "${script['file']}"
+  fi
+}
+
+# Do some early command line argument processing
+
+if [ "${script['args']}" = "" ]; then
+  print_help
+  exit
+fi
+
+# Function: process_options
+#
+# Handle options
+
+process_options () {
+  option="$1"
+  if [[ "${option}" =~ ^no|^un|^dont ]]; then
+    options["${option}"]="true"
+    if [[ "${option}" =~ ^dont ]]; then
+      option="${option:4}"
+    else
+      option="${option:2}"
+    fi
+    value="false"
+  else
+    value="true"
+  fi
+  options["${option}"]="${value}"
+  print_message "${option} to ${value}" "set"
+}
+
+# Function: print_environment
+#
+# Print environment
+
+print_environment () {
+  echo "Environment (Options):"
+  for option in "${!options[@]}"; do
+    value="${options[${option}]}"
+    echo -e "Option ${option}\tis set to ${value}"
+  done
+}
+
+# Function: print_defaults
+#
+# Print defaults
+
+print_defaults () {
+  echo "Defaults:"
+  for default in "${!options[@]}"; do
+    value="${options[${default}]}"
+    echo -e "Default ${default}\tis set to ${value}"
+  done
+}
+
+# Function: check_config
+#
+# Check configuration
+
+check_config () {
+  if [ ! -d "${options['workdir']}" ]; then
+    warning_message "Work directory ${options['workdir']} does not exist"
+    execute_command "mkdir -p ${options['workdir']}"
+  fi
+  if [ ! -d "${options['builddir']}" ]; then
+    warning_message "Build directory ${options['builddir']} does not exist"
+    execute_command "git clone https://github.com/armbian/build"
+  fi
+}
+
+# Function: generate_config
+#
+# Generate configuration
+
+generate_config () {
+  check_config
+  for param in ip netmask gateway dns; do
+    if [ "${options[${param}]}" = "" ]; then
+      warning_message "${param} is not set"
+      do_exit
+    fi
+  done
+  if [ "${options['import']}" = "true" ]; then
+    if [ ! -f "${options['firstrun']}" ]; then
+      warning_message "Import file ${options['firstrun']} does not exist"
+      do_exit
+    fi
+    execute_command "cp ${options['firstrun']} ${defaults['firstrun']}"
+  else
+    information_message "Generating ${defaults['firstrun']}"
+    tee "${defaults['firstrun']}" << FIRSTRUN
+function post_family_tweaks__preset_configs() {
+  display_alert "\$BOARD" "preset configs for rootfs" "info"
+  # Set PRESET_NET_CHANGE_DEFAULTS to 1 to apply any network related settings below
+  echo "PRESET_NET_CHANGE_DEFAULTS=1" > "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Enable WiFi or Ethernet.
+  #      NB: If both are enabled, WiFi will take priority and Ethernet will be disabled.
+  echo "PRESET_NET_ETHERNET_ENABLED=${options['ethernet']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_WIFI_ENABLED=${options['wifi']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  #Enter your WiFi creds
+  #      SECURITY WARN: Your wifi keys will be stored in plaintext, no encryption.
+  echo "PRESET_NET_WIFI_SSID='${options['ssid']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_WIFI_KEY='${options['key']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  #      Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+  echo "PRESET_NET_WIFI_COUNTRYCODE='${options['countrycode']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  #If you want to use a static ip, set it here
+  echo "PRESET_NET_USE_STATIC=${options['static']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_IP='${options['ip']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_MASK='${options['netmask']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_GATEWAY='${options['gateway']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_DNS='${options['dns']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset user default shell, you can choose bash or  zsh
+  echo "PRESET_USER_SHELL=${options['shell']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
+  echo "PRESET_CONNECT_WIRELESS=${options['connectwireless']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
+  echo "SET_LANG_BASED_ON_LOCATION=${options['setlang']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset default locale
+  echo "PRESET_LOCALE=${options['locale']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset timezone
+  echo "PRESET_TIMEZONE=${options['timezone']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset root password
+  echo "PRESET_ROOT_PASSWORD=${options['rootpassword']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset username
+  echo "PRESET_USER_NAME=${options['username']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset user password
+  echo "PRESET_USER_PASSWORD=${options['userpassword']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+
+  # Preset user default realname
+  echo "PRESET_DEFAULT_REALNAME=${options['realname']}" >> "\${SDCARD}"/root/.not_logged_in_yet    
+}
+FIRSTRUN
+  fi
+}
+
+# Function: build_image
+#
+# Build image
+
+build_image () {
+  check_config
+  if [ "${options['default']}" = "true" ]; then
+    execute_command "cd ${options['builddir']} && ./compile.sh"
+  else
+    generate_config
+    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && ./compile.sh"
+  fi
+}
+
+# Function: process_actions
+#
+# Handle actions
+
+process_actions () {
+  actions="$1"
+  case $actions in
+    build)                # action : Build image
+      build_image
+      exit
+      ;;
+    check*)                # action : Run checks
+      check_config
+      exit
+      ;;
+    gen*)                 # action : Generate configuration
+      generate_config
+      exit
+      ;;
+    help)                 # action : Print actions help
+      print_actions
+      exit
+      ;;
+    version)              # action : Print version
+      print_version
+      exit
+      ;;
+    printenv*)            # action : Print environment
+      print_environment
+      exit
+      ;;
+    printdefaults)        # action : Print defaults
+      print_defaults
+      exit
+      ;;
+    shellcheck)           # action : Shellcheck script
+      check_shellcheck
+      exit
+      ;;
+    *)
+      print_actions
+      exit
+      ;;
+  esac
+}
+
+# Handle mask option
+
+if [[ $@ =~ --option ]] && [[ $@ =~ mask ]]; then
+  options['mask']="true"
+fi
+
+# Handle command line arguments
+
+while test $# -gt 0; do
+  case $1 in
+    --action*)                # switch : Action to perform
+      check_value "$1" "$2"
+      actions_list+=("$2")
+      shift 2
+      ;;
+    --build)                  # switch : Build image
+      actions_list+=("build")
+      shift
+      ;;
+    --builddir*)              # switch : Build directory
+      check_value "$1" "$2"
+      options['builddir']="$2"
+      shift 2
+      ;;
+    --check*)                 # switch : Run checks
+      actions_list+=("check")
+      shift
+      ;;
+    --connectwi*)             # switch : Connect to wireless
+      options['connectwireless']="y"
+      shift
+      ;;
+    --country*)               # switch : Country code
+      check_value "$1" "$2"
+      options['countrycode']="$2"
+      shift 2
+      ;;
+    --debug)                  # switch : Enable debug mode
+      options['debug']="true"
+      shift
+      ;;
+    --default)                # switch : Enable default build mode
+      options['default']="true"
+      shift
+      ;;
+    --dhcp*)                  # switch : Enable DHCP
+      options['static']="0"
+      shift
+      ;;
+    --dns*)                   # switch : DNS Server
+      options['static']="1"
+      check_value "$1" "$2"
+      options['dns']="$2"
+      shift 2
+      ;;
+    --dontconnectwi*)         # switch : Don't connect to wireless
+      options['connectwireless']="n"
+      shift
+      ;; 
+    --dontsetlang)            # switch : Don't set language based on location
+      options['setlang']="n"
+      shift
+      ;;
+    --dryrun)                 # switch : Enable dryrun mode
+      options['dryrun']="true"
+      shift
+      ;;
+    --ethernet)               # switch : Enable Ethernet
+      options['ethernet']="1"
+      shift
+      ;;
+    --firstrun*)              # switch : First run script
+      check_value "$1" "$2"
+      options['firstrun']="$2"
+      shift 2
+      ;;
+    --force)                  # switch : Enable force mode
+      options['force']="true"
+      shift
+      ;;
+    --gateway*)               # switch : Gateway
+      options['static']="1"
+      check_value "$1" "$2"
+      options['gateway']="$2"
+      shift 2
+      ;;
+    --gen*)                   # switch : Generate configuration
+      actions_list+=("generate")
+      shift
+      ;;
+    --firstrun*)              # switch : First run script
+      check_value "$1" "$2"
+      options['firstrun']="$2"
+      shift 2
+      ;;
+    --help|-h)                # switch : Print help information
+      print_help
+      shift
+      exit
+      ;;
+    --import)                 # switch : Import configuration
+      options['import']="true"
+      shift
+      ;;
+    --ip*)                    # switch : IP Address
+      options['static']="1"
+      check_value "$1" "$2"
+      options['ip']="$2"
+      shift 2
+      ;;
+    --key)                    # switch : WiFi key
+      check_value "$1" "$2"
+      options['key']="$2"
+      shift 2
+      ;;
+    --locale)                 # switch : Locale
+      check_value "$1" "$2"
+      options['locale']="$2"
+      shift 2
+      ;;
+    --mask)                   # switch : Mask identifiers
+      options['mask']="true"
+      shift
+      ;;
+    --netmask*)                  # switch : Subnet Mask
+      options['static']="1"
+      check_value "$1" "$2"
+      options['netmask']="$2"
+      shift 2
+      ;;
+    --option*)                # switch : Action to perform
+      check_value "$1" "$2"
+      options_list+=("$2")
+      shift 2
+      ;;
+    --realname)               # switch : User Real name
+      check_value "$1" "$2"
+      options['realname']="$2"
+      shift 2
+      ;;
+    --rootpass)               # switch : Root Password
+      check_value "$1" "$2"
+      options['rootpassword']="$2"
+      shift 2
+      ;;
+    --setlang)                # switch : Set language based on location
+      options['setlang']="y"
+      shift
+      ;;
+    --shellcheck)             # switch - Run shellcheck
+      actions_list+=("shellcheck")
+      shift
+      ;;
+    --shell)                  # switch : User shell
+      check_value "$1" "$2"
+      options['shell']="$2"
+      shift 2
+      ;;
+    --ssid)                   # switch : WiFi SSID
+      check_value "$1" "$2"
+      options['ssid']="$2"
+      shift 2
+      ;;
+    --static*)                # switch : Enable static IP
+      options['static']="1"
+      shift
+      ;;
+    --strict)                 # switch : Enable strict mode
+      options['strict']="true"
+      shift
+      ;;
+    --timezone)               # switch : Timezone
+      check_value "$1" "$2"
+      options['timezone']="$2"
+      shift 2
+      ;;
+    --usage)                  # switch : Action to perform
+      check_value "$1" "$2"
+      usage="$2"
+      print_usage "${usage}"
+      shift 2
+      exit
+      ;;
+    --username)               # switch : Username
+      check_value "$1" "$2"
+      options['username']="$2"
+      shift 2
+      ;;
+    --userpass)               # switch : User Password
+      check_value "$1" "$2"
+      options['userpassword']="$2"
+      shift 2
+      ;;
+    --verbose)                # switch : Enable verbose mode
+      options['verbose']="true"
+      shift
+      ;;
+    --version|-V)             # switch : Print version information
+      print_version
+      exit
+      ;;
+    --wifi)                   # switch : Enable WiFi
+      options['wifi']="1"
+      shift
+      ;;
+    --workdir)                # switch : Work directory
+      check_value "$1" "$2"
+      options['workdir']="$2"
+      shift 2
+      ;;
+    *)
+      print_help
+      shift
+      exit
+      ;;
+  esac
+done
+
+# Process options
+
+if [ -n "${options_list[*]}" ]; then
+  for list in "${options_list[@]}"; do
+    if [[ "${list}" =~ "," ]]; then
+      IFS="," read -r -a array <<< "${list[*]}"
+      for item in "${array[@]}"; do
+        process_options "${item}"
+      done
+    else
+      process_options "${list}"
+    fi
+  done
+fi
+
+# Reset defaults based on switches
+
+reset_defaults
+
+# Process actions
+
+if [ -n "${actions_list[*]}" ]; then
+  for list in "${actions_list[@]}"; do
+    if [[ "${list}" =~ "," ]]; then
+      IFS="," read -r -a array <<< "${list[*]}"
+      for item in "${array[@]}"; do
+        process_actions "${item}"
+      done
+    else
+      process_actions "${list}"
+    fi
+  done
+fi
