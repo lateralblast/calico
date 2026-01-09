@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.6.2
+# Version:      0.7.3
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -57,11 +57,19 @@ set_defaults () {
   options['verbose']="false"                          # option : Verbose mode
   options['gateway']=""                               # option : Gateway
   options['setlang']="y"                              # option : Set language based on location
+  options['release']=""                               # option : Release
+  options['minimal']="y"                              # option : Minimal
+  options['desktop']="n"                              # option : Desktop
   options['default']="false"                          # option : Default mode
   options['locale']="en_AU.UTF-8"                     # option : Locale
   options['strict']="false"                           # option : Strict mode
   options['import']="false"                           # option : Import mode
   options['dryrun']="false"                           # option : Dryrun mode
+  options['expert']="n"                               # option : Expert mode
+  options['branch']="current"                         # option : Branch
+  options['board']=""                                 # option : Board
+  options['config']="n"                               # option : Configure kernel
+  options['build']="minimal"                          # option : Build
   options['debug']="false"                            # option : Debug mode
   options['force']="false"                            # option : Force actions
   options['ssid']="SSID"                              # option : WiFi SSID
@@ -207,6 +215,31 @@ reset_defaults () {
   fi
   if [ "${options['dryrun']}" = "true" ]; then
     print_message "Enabling dryrun mode" "notice"
+  fi
+  if [ "${options['minimal']}" = "y" ]; then
+    options['build']="minimal"
+    options['desktop']="n"
+    options['minimal']="y"
+  fi
+  if [ "${options['desktop']}" = "y" ]; then
+    options['build']="desktop"
+    options['desktop']="y"
+    options['minimal']="n"
+  fi
+  if [ "${options['build']}" = "" ]; then
+    options['build']="minimal"
+    options['desktop']="n"
+    options['minimal']="y"
+  fi
+  if [ "${options['build']}" = "desktop" ]; then
+    options['build']="desktop"
+    options['desktop']="y"
+    options['minimal']="n"
+  fi
+  if [ "${options['build']}" = "minimal" ]; then
+    options['build']="minimal"
+    options['desktop']="n"
+    options['minimal']="y"
   fi
 }
 
@@ -546,11 +579,11 @@ FIRSTRUN
   fi
 }
 
-# Function: build_image
+# Function: compile_image
 #
-# Build image
+# Compile image
 
-build_image () {
+compile_image () {
   check_config
   if [ "${options['default']}" = "true" ]; then
     execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
@@ -560,11 +593,11 @@ build_image () {
   fi
 }
 
-# Function: rebuild_image
+# Function: recompile_image
 #
-# Rebuild image
+# Recompile image
 
-rebuild_image () {
+recompile_image () {
   check_config
   if [ -f "${options['firstrun']}" ]; then
     execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
@@ -574,6 +607,40 @@ rebuild_image () {
   fi
 }
 
+# Function: list_boards
+#
+# List boards
+
+list_boards () {
+  board_dir="${options['builddir']}/config/boards"
+  if [ ! -d "${board_dir}" ]; then
+    warning_message "Board directory ${board_dir} does not exist"
+    do_exit
+  else
+    boards=$( ls "${board_dir}" )
+    for board in $boards; do
+      echo "${board%.*}"
+    done
+  fi
+}
+
+# Function: list_items
+#
+# List items
+
+list_items () {
+  case "${options['list']}" in
+    board*)
+      list_boards
+      exit
+      ;;
+    *)
+      warning_message "Invalid list option: ${options['list']}"
+      do_exit
+      ;;
+  esac
+}
+
 # Function: process_actions
 #
 # Handle actions
@@ -581,8 +648,8 @@ rebuild_image () {
 process_actions () {
   actions="$1"
   case $actions in
-    build*)               # action : Build image
-      build_image
+    compile*)             # action : Compile image
+      compile_image
       exit
       ;;
     check*)               # action : Run checks
@@ -597,8 +664,8 @@ process_actions () {
       print_actions
       exit
       ;;
-    version)              # action : Print version
-      print_version
+    list*)                # action : List - e.g. board
+      list_items
       exit
       ;;
     printenv*)            # action : Print environment
@@ -609,12 +676,16 @@ process_actions () {
       print_defaults
       exit
       ;;
-    rebuild*)             # action : Rebuild image - Use existing config
-      rebuild_image
+    recompile*)           # action : Recompile image - Use existing config
+      recompile_image
       exit
       ;;
     shellcheck)           # action : Shellcheck script
       check_shellcheck
+      exit
+      ;;
+    version)              # action : Print version
+      print_version
       exit
       ;;
     view*)                # action : View configuration
@@ -643,17 +714,36 @@ while test $# -gt 0; do
       actions_list+=("$2")
       shift 2
       ;;
-    --build)                  # switch : Build image
-      actions_list+=("build")
-      shift
+    --build)                  # switch : Build
+      check_value "$1" "$2"
+      options['build']="$2"
+      shift 2
       ;;
     --builddir*)              # switch : Build directory
       check_value "$1" "$2"
       options['builddir']="$2"
       shift 2
       ;;
+    --board*)                 # switch : Board
+      check_value "$1" "$2"
+      options['board']="$2"
+      shift 2
+      ;;
+    --branch*)                # switch : Branch
+      check_value "$1" "$2"
+      options['branch']="$2"
+      shift 2
+      ;;
     --check*)                 # switch : Run checks
       actions_list+=("check")
+      shift
+      ;;
+    --compile*)               # switch : Compile image
+      actions_list+=("compile")
+      shift
+      ;;
+    --config*)                # switch : Configure kernel
+      options['config']="y"
       shift
       ;;
     --connectwi*)             # switch : Connect to wireless
@@ -671,6 +761,11 @@ while test $# -gt 0; do
       ;;
     --default)                # switch : Enable default build mode
       options['default']="true"
+      shift
+      ;;
+    --desktop)                # switch : Enable desktop mode
+      options['desktop']="y"
+      options['minimal']="n"
       shift
       ;;
     --dhcp*)                  # switch : Enable DHCP
@@ -698,6 +793,10 @@ while test $# -gt 0; do
       ;;
     --ethernet)               # switch : Enable Ethernet
       options['ethernet']="1"
+      shift
+      ;;
+    --expert)                 # switch : Expert mode
+      options['expert']="y"
       shift
       ;;
     --firstrun*)              # switch : First run script
@@ -746,6 +845,12 @@ while test $# -gt 0; do
       options['key']="$2"
       shift 2
       ;;
+    --list)                   # switch : List - e.g. board
+      actions_list+=("list")
+      check_value "$1" "$2"
+      options['list']="$2"
+      shift 2
+      ;;
     --locale)                 # switch : Locale
       check_value "$1" "$2"
       options['locale']="$2"
@@ -755,7 +860,12 @@ while test $# -gt 0; do
       options['mask']="true"
       shift
       ;;
-    --netmask*)                  # switch : Subnet Mask
+    --minimal)                # switch : Enable minimal mode
+      options['desktop']="n"
+      options['minimal']="y"
+      shift
+      ;;
+    --netmask*)               # switch : Subnet Mask
       options['static']="1"
       options['ethernet']="1"
       check_value "$1" "$2"
@@ -772,9 +882,14 @@ while test $# -gt 0; do
       options['realname']="$2"
       shift 2
       ;;
-    --rebuild*)               # switch : Rebuild image - Use existing config
-      actions_list+=("rebuild")
+    --recompile*)             # switch : Recompile image - Use existing config
+      actions_list+=("recompile")
       shift
+      ;;
+    --release*)               # switch : Release
+      check_value "$1" "$2"
+      options['release']="$2"
+      shift 2
       ;;
     --rootpass)               # switch : Root Password
       check_value "$1" "$2"

@@ -122,3 +122,25 @@
 # Added rebuild action
 # 0.6.2: Fri  9 Jan 2026 14:01:52 AEDT
 # Added term option
+# 0.6.3: Fri  9 Jan 2026 14:25:53 AEDT
+# Added build option
+# 0.6.4: Fri  9 Jan 2026 14:26:53 AEDT
+# Added branch option
+# 0.6.5: Fri  9 Jan 2026 14:27:53 AEDT
+# Added board option
+# 0.6.6: Fri  9 Jan 2026 14:28:53 AEDT
+# Added expert option
+# 0.6.7: Fri  9 Jan 2026 14:29:53 AEDT
+# Added release option
+# 0.6.8: Fri  9 Jan 2026 14:30:53 AEDT
+# Moved build option to compile option
+# 0.6.9: Fri  9 Jan 2026 15:45:13 AEDT
+# Added minimal and desktop options
+# 0.7.0: Fri  9 Jan 2026 15:46:13 AEDT
+# Added expert option
+# 0.7.1: Fri  9 Jan 2026 15:47:13 AEDT
+# Added config option
+# 0.7.2: Fri  9 Jan 2026 17:20:23 AEDT
+# Added list action
+# 0.7.3: Fri  9 Jan 2026 17:21:23 AEDT
+# Added check for board directory
