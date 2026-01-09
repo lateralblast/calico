@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.6.1
+# Version:      0.6.2
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -67,6 +67,7 @@ set_defaults () {
   options['ssid']="SSID"                              # option : WiFi SSID
   options['shell']="bash"                             # option : User shell
   options['wifi']="0"                                 # option : WiFi 
+  options['term']="ansi"                              # option : Terminal type
   options['mask']="false"                             # option : Mask identifiers
   options['dns']="8.8.8.8"                            # option : DNS
   options['yes']="false"                              # option : Answer yes to questions
@@ -552,10 +553,10 @@ FIRSTRUN
 build_image () {
   check_config
   if [ "${options['default']}" = "true" ]; then
-    execute_command "cd ${options['builddir']} && ./compile.sh"
+    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
   else
     generate_config
-    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && ./compile.sh"
+    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
   fi
 }
 
@@ -566,7 +567,7 @@ build_image () {
 rebuild_image () {
   check_config
   if [ -f "${options['firstrun']}" ]; then
-    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && ./compile.sh"
+    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
   else
     warning_message "${options['firstrun']} does not exist"
     do_exit
@@ -805,6 +806,11 @@ while test $# -gt 0; do
     --strict)                 # switch : Enable strict mode
       options['strict']="true"
       shift
+      ;;
+    --term*)                  # switch : Terminal type
+      check_value "$1" "$2"
+      options['term']="$2"
+      shift 2
       ;;
     --timezone)               # switch : Timezone
       check_value "$1" "$2"

@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-calico.sh version 0.6.1
+calico.sh version 0.6.2
 
 Introduction
 ------------

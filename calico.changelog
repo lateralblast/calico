@@ -120,3 +120,5 @@
 # Fixes for static ip configuration
 # 0.6.1: Fri  9 Jan 2026 14:00:21 AEDT
 # Added rebuild action
+# 0.6.2: Fri  9 Jan 2026 14:01:52 AEDT
+# Added term option
