@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.5.9
+# Version:      0.6.1
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -559,6 +559,20 @@ build_image () {
   fi
 }
 
+# Function: rebuild_image
+#
+# Rebuild image
+
+rebuild_image () {
+  check_config
+  if [ -f "${options['firstrun']}" ]; then
+    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && ./compile.sh"
+  else
+    warning_message "${options['firstrun']} does not exist"
+    do_exit
+  fi
+}
+
 # Function: process_actions
 #
 # Handle actions
@@ -566,11 +580,11 @@ build_image () {
 process_actions () {
   actions="$1"
   case $actions in
-    build)                # action : Build image
+    build*)               # action : Build image
       build_image
       exit
       ;;
-    check*)                # action : Run checks
+    check*)               # action : Run checks
       check_config
       exit
       ;;
@@ -592,6 +606,10 @@ process_actions () {
       ;;
     printdefaults)        # action : Print defaults
       print_defaults
+      exit
+      ;;
+    rebuild*)             # action : Rebuild image - Use existing config
+      rebuild_image
       exit
       ;;
     shellcheck)           # action : Shellcheck script
@@ -660,6 +678,7 @@ while test $# -gt 0; do
       ;;
     --dns*)                   # switch : DNS Server
       options['static']="1"
+      options['ethernet']="1"
       check_value "$1" "$2"
       options['dns']="$2"
       shift 2
@@ -691,6 +710,7 @@ while test $# -gt 0; do
       ;;
     --gateway*)               # switch : Gateway
       options['static']="1"
+      options['ethernet']="1"
       check_value "$1" "$2"
       options['gateway']="$2"
       shift 2
@@ -715,6 +735,7 @@ while test $# -gt 0; do
       ;;
     --ip*)                    # switch : IP Address
       options['static']="1"
+      options['ethernet']="1"
       check_value "$1" "$2"
       options['ip']="$2"
       shift 2
@@ -735,6 +756,7 @@ while test $# -gt 0; do
       ;;
     --netmask*)                  # switch : Subnet Mask
       options['static']="1"
+      options['ethernet']="1"
       check_value "$1" "$2"
       options['netmask']="$2"
       shift 2
@@ -748,6 +770,10 @@ while test $# -gt 0; do
       check_value "$1" "$2"
       options['realname']="$2"
       shift 2
+      ;;
+    --rebuild*)               # switch : Rebuild image - Use existing config
+      actions_list+=("rebuild")
+      shift
       ;;
     --rootpass)               # switch : Root Password
       check_value "$1" "$2"
