@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.5.6
+# Version:      0.5.9
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -446,7 +446,20 @@ check_config () {
   fi
   if [ ! -d "${options['builddir']}" ]; then
     warning_message "Build directory ${options['builddir']} does not exist"
-    execute_command "git clone https://github.com/armbian/build"
+    execute_command "cd ${options['workdir']} && git clone https://github.com/armbian/build"
+  fi
+}
+
+# Function: view_config
+#
+# View configuration
+
+view_config () {
+  if [ ! -f "${defaults['firstrun']}" ]; then
+    warning_message "${defaults['firstrun']} does not exist"
+    do_exit
+  else
+    execute_command "cat ${defaults['firstrun']}"
   fi
 }
 
@@ -456,6 +469,11 @@ check_config () {
 
 generate_config () {
   check_config
+  patches_dir=$( dirname "${defaults['firstrun']}" )
+  if [ ! -d "${patches_dir}" ]; then
+    information_message "Creating directory ${patches_dir}"
+    execute_command "mkdir -p ${patches_dir}"
+  fi
   for param in ip netmask gateway dns; do
     if [ "${options[${param}]}" = "" ]; then
       warning_message "${param} is not set"
@@ -578,6 +596,10 @@ process_actions () {
       ;;
     shellcheck)           # action : Shellcheck script
       check_shellcheck
+      exit
+      ;;
+    view*)                # action : View configuration
+      view_config
       exit
       ;;
     *)
@@ -787,6 +809,10 @@ while test $# -gt 0; do
     --version|-V)             # switch : Print version information
       print_version
       exit
+      ;;
+    --view*)                  # switch - View config
+      actions_list+=("view")
+      shift
       ;;
     --wifi)                   # switch : Enable WiFi
       options['wifi']="1"
