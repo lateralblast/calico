@@ -164,3 +164,5 @@
 # Fixed double usage of firstrun switch
 # 0.8.3: Sat 10 Jan 2026 14:06:28 AEDT
 # Fixed mask check
+# 0.8.4: Sun 11 Jan 2026 10:25:05 AEDT
+# Fixed image directory listing

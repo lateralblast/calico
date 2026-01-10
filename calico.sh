@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.8.3
+# Version:      0.8.4
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -660,7 +660,7 @@ list_boards () {
 # List images
 
 list_images () {
-  image_dir="${options['builddir']}/config/output"
+  image_dir="${options['builddir']}/output/images"
   if [ ! -d "${image_dir}" ]; then
     warning_message "Image directory ${image_dir} does not exist"
     do_exit
