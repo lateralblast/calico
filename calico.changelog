@@ -154,3 +154,7 @@
 # Updated compile function
 # 0.7.8: Sat 10 Jan 2026 13:07:38 AEDT
 # Added list images
+# 0.7.9: Sat 10 Jan 2026 13:55:26 AEDT
+# Fixed information_message and notice_message functions
+# 0.8.0: Sat 10 Jan 2026 14:00:21 AEDT
+# Added code to print what options are set in verbose mode

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.7.8
+# Version:      0.8.0
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -181,7 +181,7 @@ execute_message () {
 
 notice_message () {
   message="$1"
-  verbose_message "${message}" "notice"
+  print_message "${message}" "notice"
 }
 
 # Function: notice_message
@@ -190,7 +190,7 @@ notice_message () {
 
 information_message () {
   message="$1"
-  verbose_message "${message}" "info"
+  print_message "${message}" "information"
 }
 
 # Load modules
@@ -249,6 +249,11 @@ reset_defaults () {
     options['build']="minimal"
     options['desktop']="no"
     options['minimal']="yes"
+  fi
+  if [ "${options['verbose']}" = "true" ]; then
+    for param in "${!options[@]}"; do
+      information_message "Setting ${param} to ${options[${param}]}"
+    done
   fi
 }
 
