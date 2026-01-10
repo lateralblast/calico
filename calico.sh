@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.7.3
+# Version:      0.7.8
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -22,8 +22,9 @@
 # Create arrays
 
 declare -A os
+declare -A flags
 declare -A script
-declare -A options 
+declare -A options
 declare -A defaults
 declare -a options_list
 declare -a actions_list
@@ -43,11 +44,19 @@ script['bin']=$( basename "${script['file']}" )
 # Set defaults
 
 set_defaults () {
+  flags['board']="BOARD"                              # flag : Board
+  flags['branch']="BRANCH"                            # flag : Kernel Branch
+  flags['expert']="EXPERT"                            # flag : Expert mode
+  flags['release']="RELEASE"                          # flag : Release
+  flags['minimal']="BUILD_MINIMAL"                    # flag : Minimal
+  flags['desktop']="BUILD_DESKTOP"                    # flag : Desktop
+  flags['configure']="KERNEL_CONFIGURE"               # flag : Configure kernel
   options['workdir']="${HOME}/${script['name']}"      # option : Work directory
   options['connectwireless']="y"                      # option : Connect to wireless
   options['userpassword']="armbian"                   # option : User password
   options['rootpassword']="armbian"                   # option : Root password
   options['countrycode']="AU"                         # option : Country code
+  options['configure']="no"                           # option : Configure kernel
   options['builddir']="${options['workdir']}/build"   # option : Build directory
   options['ethernet']="0"                             # option : Ethernet
   options['username']="armbian"                       # option : Username
@@ -58,17 +67,17 @@ set_defaults () {
   options['gateway']=""                               # option : Gateway
   options['setlang']="y"                              # option : Set language based on location
   options['release']=""                               # option : Release
-  options['minimal']="y"                              # option : Minimal
-  options['desktop']="n"                              # option : Desktop
+  options['minimal']="yes"                            # option : Minimal
+  options['desktop']="no"                             # option : Desktop
   options['default']="false"                          # option : Default mode
   options['locale']="en_AU.UTF-8"                     # option : Locale
   options['strict']="false"                           # option : Strict mode
   options['import']="false"                           # option : Import mode
   options['dryrun']="false"                           # option : Dryrun mode
-  options['expert']="n"                               # option : Expert mode
+  options['expert']="no"                              # option : Expert mode
   options['branch']="current"                         # option : Branch
   options['board']=""                                 # option : Board
-  options['config']="n"                               # option : Configure kernel
+  options['flags']=""                                 # option : Compile flags
   options['build']="minimal"                          # option : Build
   options['debug']="false"                            # option : Debug mode
   options['force']="false"                            # option : Force actions
@@ -216,30 +225,30 @@ reset_defaults () {
   if [ "${options['dryrun']}" = "true" ]; then
     print_message "Enabling dryrun mode" "notice"
   fi
-  if [ "${options['minimal']}" = "y" ]; then
+  if [ "${options['minimal']}" = "yes" ]; then
     options['build']="minimal"
-    options['desktop']="n"
-    options['minimal']="y"
+    options['desktop']="no"
+    options['minimal']="yes"
   fi
-  if [ "${options['desktop']}" = "y" ]; then
+  if [ "${options['desktop']}" = "yes" ]; then
     options['build']="desktop"
-    options['desktop']="y"
-    options['minimal']="n"
+    options['desktop']="yes"
+    options['minimal']="no"
   fi
   if [ "${options['build']}" = "" ]; then
     options['build']="minimal"
-    options['desktop']="n"
-    options['minimal']="y"
+    options['desktop']="no"
+    options['minimal']="yes"
   fi
   if [ "${options['build']}" = "desktop" ]; then
     options['build']="desktop"
-    options['desktop']="y"
-    options['minimal']="n"
+    options['desktop']="yes"
+    options['minimal']="no"
   fi
   if [ "${options['build']}" = "minimal" ]; then
     options['build']="minimal"
-    options['desktop']="n"
-    options['minimal']="y"
+    options['desktop']="no"
+    options['minimal']="yes"
   fi
 }
 
@@ -579,17 +588,33 @@ FIRSTRUN
   fi
 }
 
+# Function: get_compile_flags
+#
+# Get compile flags
+get_compile_flags () {
+  for param in "${!flags[@]}"; do
+    if [ ! "${options[$param]}" = "" ]; then
+      if [ "${options['flags']}" = "" ]; then
+        options['flags']="${flags[$param]}=${options[$param]}"
+      else
+        options['flags']="${options['flags']} ${flags[$param]}=${options[$param]}"
+      fi
+    fi
+  done
+}
+
 # Function: compile_image
 #
 # Compile image
 
 compile_image () {
   check_config
+  get_compile_flags
   if [ "${options['default']}" = "true" ]; then
-    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
+    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
   else
     generate_config
-    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
+    execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
   fi
 }
 
@@ -599,8 +624,9 @@ compile_image () {
 
 recompile_image () {
   check_config
+  get_compile_flags
   if [ -f "${options['firstrun']}" ]; then
-    execute_command "ENABLE_EXTENSIONS=preset-firstrun ; cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
+    execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
   else
     warning_message "${options['firstrun']} does not exist"
     do_exit
@@ -624,6 +650,20 @@ list_boards () {
   fi
 }
 
+# Function: list_images
+#
+# List images
+
+list_images () {
+  image_dir="${options['builddir']}/config/output"
+  if [ ! -d "${image_dir}" ]; then
+    warning_message "Image directory ${image_dir} does not exist"
+    do_exit
+  else
+    find "${image_dir}" -name "*.img" -exec basename {} \; 
+  fi
+}
+
 # Function: list_items
 #
 # List items
@@ -632,6 +672,10 @@ list_items () {
   case "${options['list']}" in
     board*)
       list_boards
+      exit
+      ;;
+    image*)
+      list_images
       exit
       ;;
     *)
@@ -743,11 +787,11 @@ while test $# -gt 0; do
       shift
       ;;
     --config*)                # switch : Configure kernel
-      options['config']="y"
+      options['configure']="yes"
       shift
       ;;
     --connectwi*)             # switch : Connect to wireless
-      options['connectwireless']="y"
+      options['connectwireless']="yes"
       shift
       ;;
     --country*)               # switch : Country code
@@ -764,8 +808,8 @@ while test $# -gt 0; do
       shift
       ;;
     --desktop)                # switch : Enable desktop mode
-      options['desktop']="y"
-      options['minimal']="n"
+      options['desktop']="yes"
+      options['minimal']="no"
       shift
       ;;
     --dhcp*)                  # switch : Enable DHCP
@@ -795,13 +839,18 @@ while test $# -gt 0; do
       options['ethernet']="1"
       shift
       ;;
-    --expert)                 # switch : Expert mode
-      options['expert']="y"
+    --expert*)                # switch : Expert mode
+      options['expert']="yes"
       shift
       ;;
     --firstrun*)              # switch : First run script
       check_value "$1" "$2"
       options['firstrun']="$2"
+      shift 2
+      ;;
+    --flags*)                 # switch : Compile flags
+      check_value "$1" "$2"
+      options['flags']="$2"
       shift 2
       ;;
     --force)                  # switch : Enable force mode
@@ -861,8 +910,8 @@ while test $# -gt 0; do
       shift
       ;;
     --minimal)                # switch : Enable minimal mode
-      options['desktop']="n"
-      options['minimal']="y"
+      options['desktop']="no"
+      options['minimal']="yes"
       shift
       ;;
     --netmask*)               # switch : Subnet Mask

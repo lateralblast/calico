@@ -144,3 +144,13 @@
 # Added list action
 # 0.7.3: Fri  9 Jan 2026 17:21:23 AEDT
 # Added check for board directory
+# 0.7.4: Sat 10 Jan 2026 10:26:23 AEDT
+# Added flags option
+# 0.7.5: Sat 10 Jan 2026 11:03:35 AEDT
+# Added routine to get compile flags
+# 0.7.6: Sat 10 Jan 2026 11:46:00 AEDT
+# Updated compile flags
+# 0.7.7: Sat 10 Jan 2026 12:51:01 AEDT
+# Updated compile function
+# 0.7.8: Sat 10 Jan 2026 13:07:38 AEDT
+# Added list images
