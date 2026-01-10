@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.8.0
+# Version:      0.8.3
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -94,7 +94,7 @@ set_defaults () {
   if [ "${os['name']}" = "Linux" ]; then
     lsb_check=$( command -v lsb_release )
     if [ -n "${lsb_check}" ]; then 
-      os['distro']=$( lsb_release -i -s 2 | sed 's/"//g' > /dev/null )
+      os['distro']=$( lsb_release -i -s | sed 's/"//g' )
     else
       os['distro']=$( hostnamectl | grep "Operating System" | awk '{print $3}' )
     fi
@@ -750,7 +750,7 @@ process_actions () {
 
 # Handle mask option
 
-if [[ $@ =~ --option ]] && [[ $@ =~ mask ]]; then
+if [[ ${script['args']} =~ --option ]] && [[ ${script['args']} =~ mask ]]; then
   options['mask']="true"
 fi
 
@@ -872,11 +872,6 @@ while test $# -gt 0; do
     --gen*)                   # switch : Generate configuration
       actions_list+=("generate")
       shift
-      ;;
-    --firstrun*)              # switch : First run script
-      check_value "$1" "$2"
-      options['firstrun']="$2"
-      shift 2
       ;;
     --help|-h)                # switch : Print help information
       print_help

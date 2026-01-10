@@ -158,3 +158,9 @@
 # Fixed information_message and notice_message functions
 # 0.8.0: Sat 10 Jan 2026 14:00:21 AEDT
 # Added code to print what options are set in verbose mode
+# 0.8.1: Sat 10 Jan 2026 14:02:21 AEDT
+# Fixed OS distribution determination
+# 0.8.2: Sat 10 Jan 2026 14:05:28 AEDT
+# Fixed double usage of firstrun switch
+# 0.8.3: Sat 10 Jan 2026 14:06:28 AEDT
+# Fixed mask check
