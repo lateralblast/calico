@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.8.5
+# Version:      0.8.6
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -66,7 +66,7 @@ set_defaults () {
   options['verbose']="false"                          # option : Verbose mode
   options['gateway']=""                               # option : Gateway
   options['setlang']="y"                              # option : Set language based on location
-  options['release']=""                               # option : Release
+  options['release']="noble"                          # option : Release
   options['minimal']="yes"                            # option : Minimal
   options['desktop']="no"                             # option : Desktop
   options['default']="false"                          # option : Default mode
@@ -85,6 +85,7 @@ set_defaults () {
   options['ssid']="SSID"                              # option : WiFi SSID
   options['shell']="bash"                             # option : User shell
   options['wifi']="0"                                 # option : WiFi 
+  options['full']="false"                             # option : Full path
   options['term']="ansi"                              # option : Terminal type
   options['mask']="false"                             # option : Mask identifiers
   options['dns']="8.8.8.8"                            # option : DNS
@@ -670,7 +671,11 @@ list_images () {
     warning_message "Image directory ${image_dir} does not exist"
     do_exit
   else
-    find "${image_dir}" -name "*.img" -exec basename {} \; 
+    if [ "${options['full']}" = "true" ]; then
+      find "${image_dir}" -name "*.img"
+    else
+      find "${image_dir}" -name "*.img" -exec basename {} \; 
+    fi
   fi
 }
 
@@ -865,6 +870,10 @@ while test $# -gt 0; do
       ;;
     --force)                  # switch : Enable force mode
       options['force']="true"
+      shift
+      ;;
+    --full*)                  # switch : Enable full path mode
+      options['full']="true"
       shift
       ;;
     --gateway*)               # switch : Gateway

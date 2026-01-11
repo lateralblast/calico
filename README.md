@@ -8,13 +8,17 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-0.8.5
+0.8.6
 
 Introduction
 ------------
 
 Calico is a CLI for Armbian Linux Image Configuration.
 It is a wrapper around the Armbian build system making preconfiguration of images easier.
+
+Where possible the script will use sensible defaults to configure the image.
+If there are not enough defaults, or the manual option is used for compile,
+the armbian build system menu interface will be launched.
 
 License
 -------
@@ -81,4 +85,10 @@ Manual compile:
 
 ```bash
 ./calico.sh --complile --manual
+```
+
+Configure compile for orangepipc board with IP, gateway, DNS, etc:
+
+```bash
+./calico.sh --compile --board orangepipc --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
 ```

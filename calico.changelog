@@ -168,3 +168,5 @@
 # Fixed image directory listing
 # 0.8.5: Sun 11 Jan 2026 12:11:04 AEDT
 # Added manual compile option
+# 0.8.6: Sun 11 Jan 2026 16:37:54 AEDT
+# Added full path option
