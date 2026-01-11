@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.8.4
+# Version:      0.8.5
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -70,6 +70,7 @@ set_defaults () {
   options['minimal']="yes"                            # option : Minimal
   options['desktop']="no"                             # option : Desktop
   options['default']="false"                          # option : Default mode
+  options['manual']="false"                           # option : Manual compile
   options['locale']="en_AU.UTF-8"                     # option : Locale
   options['strict']="false"                           # option : Strict mode
   options['import']="false"                           # option : Import mode
@@ -615,11 +616,15 @@ get_compile_flags () {
 compile_image () {
   check_config
   get_compile_flags
-  if [ "${options['default']}" = "true" ]; then
-    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
+  if [ "${options['manual']}" = "true" ]; then
+    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
   else
-    generate_config
-    execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
+    if [ "${options['default']}" = "true" ]; then
+      execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
+    else
+      generate_config
+      execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
+    fi
   fi
 }
 
@@ -907,6 +912,10 @@ while test $# -gt 0; do
       ;;
     --mask)                   # switch : Mask identifiers
       options['mask']="true"
+      shift
+      ;;
+    --manual)                 # switch : Manual compile
+      options['manual']="true"
       shift
       ;;
     --minimal)                # switch : Enable minimal mode

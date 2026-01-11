@@ -166,3 +166,5 @@
 # Fixed mask check
 # 0.8.4: Sun 11 Jan 2026 10:25:05 AEDT
 # Fixed image directory listing
+# 0.8.5: Sun 11 Jan 2026 12:11:04 AEDT
+# Added manual compile option
