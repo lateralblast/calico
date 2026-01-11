@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.8.6
+# Version:      0.9.0
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -700,6 +700,45 @@ list_items () {
   esac
 }
 
+# Function: mount image
+#
+# Mount image
+
+mount_image () {
+  if [ "${options['image']}" = "" ]; then
+    warning_message "Image not specified"
+    do_exit
+  fi
+  if [ ! -f "${options['image']}" ]; then
+    warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
+  execute_command "losetup -P -f ${options['image']}" "sudo"
+  loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
+  if [ ! -d "/mnt/${script['name']}" ]; then
+    execute_command "mkdir -p /mnt/${script['name']}" "sudo"
+  fi
+  execute_command "mount ${loop_device}p1 /mnt/${script['name']}" "sudo"
+}
+
+# Function: unmount image
+#
+# Unmount image
+
+unmount_image () {
+  if [ "${options['image']}" = "" ]; then
+    warning_message "Image not specified"
+    do_exit
+  fi
+  if [ ! -f "${options['image']}" ]; then
+    warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
+  loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
+  execute_command "umount /mnt/${script['name']}" "sudo"
+  execute_command "losetup -d ${loop_device}" "sudo"
+}
+
 # Function: process_actions
 #
 # Handle actions
@@ -727,6 +766,10 @@ process_actions () {
       list_items
       exit
       ;;
+    mount*)               # action : Mount image
+      mount_image
+      exit
+      ;;
     printenv*)            # action : Print environment
       print_environment
       exit
@@ -741,6 +784,10 @@ process_actions () {
       ;;
     shellcheck)           # action : Shellcheck script
       check_shellcheck
+      exit
+      ;;
+    unmount*)             # action : Unmount image
+      unmount_image
       exit
       ;;
     version)              # action : Print version
@@ -896,6 +943,11 @@ while test $# -gt 0; do
       options['import']="true"
       shift
       ;;
+    --image*)                 # switch : Image
+      check_value "$1" "$2"
+      options['image']="$2"
+      shift 2
+      ;;
     --ip*)                    # switch : IP Address
       options['static']="1"
       options['ethernet']="1"
@@ -921,6 +973,10 @@ while test $# -gt 0; do
       ;;
     --mask)                   # switch : Mask identifiers
       options['mask']="true"
+      shift
+      ;;
+    --mount*)                 # switch : Mount image
+      actions_list+=("mount")
       shift
       ;;
     --manual)                 # switch : Manual compile
@@ -998,6 +1054,10 @@ while test $# -gt 0; do
       check_value "$1" "$2"
       options['timezone']="$2"
       shift 2
+      ;;
+    --unmount*)               # switch : Unmount image
+      actions_list+=("unmount")
+      shift
       ;;
     --usage)                  # switch : Action to perform
       check_value "$1" "$2"

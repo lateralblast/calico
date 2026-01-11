@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-0.8.6
+0.9.0
 
 Introduction
 ------------
@@ -91,4 +91,16 @@ Configure compile for orangepipc board with IP, gateway, DNS, etc:
 
 ```bash
 ./calico.sh --compile --board orangepipc --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
+```
+
+Mount image:
+
+```bash
+./calico.sh --mount --image /path/to/image.img
+```
+
+Unmount image:
+
+```bash
+./calico.sh --unmount --image /path/to/image.img
 ```
