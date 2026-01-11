@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.9.0
+# Version:      0.9.1
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -713,6 +713,11 @@ mount_image () {
     warning_message "Image ${options['image']} does not exist"
     do_exit
   fi
+  mount_check=$( mount | grep "/mnt/${script['name']}" )
+  if [ ! "${mount_check}" = "" ]; then
+    warning_message "An image is already mounted at /mnt/${script['name']}"
+    do_exit
+  fi
   execute_command "losetup -P -f ${options['image']}" "sudo"
   loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
   if [ ! -d "/mnt/${script['name']}" ]; then
@@ -732,6 +737,11 @@ unmount_image () {
   fi
   if [ ! -f "${options['image']}" ]; then
     warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
+  mount_check=$( mount | grep "/mnt/${script['name']}" )
+  if [ "${mount_check}" = "" ]; then
+    warning_message "Image ${options['image']} is not mounted"
     do_exit
   fi
   loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
