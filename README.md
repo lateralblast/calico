@@ -20,6 +20,8 @@ Where possible the script will use sensible defaults to configure the image.
 If there are not enough defaults, or the manual option is used for compile,
 the armbian build system menu interface will be launched.
 
+The script can be used to modify existing images as well as create new images.
+
 License
 -------
 
@@ -99,6 +101,12 @@ Configure compile for orangepipc board with IP, gateway, DNS, etc:
 ./calico.sh --compile --board orangepipc --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
 ```
 
+Modify existing image's IP, gateway, DNS, etc:
+
+```bash
+./calico.sh --modify --image /path/to/image.img --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
+```
+
 Mount image:
 
 ```bash
@@ -121,6 +129,12 @@ Generate buildtime configuration:
 
 ```bash
 ./calico.sh --generate --type buildtime
+```
+
+Generate docker script:
+
+```bash
+./calico.sh --generate --type docker
 ```
 
 Notes
