@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.7
+# Version:      1.0.8
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -861,11 +861,32 @@ unmount_image () {
 # Generate docker script
 
 generate_docker_script () {
+  if [ "${options['image']}" = "" ]; then
+    warning_message "Image not specified"
+    do_exit
+  fi
+  if [ ! -f "${options['image']}" ]; then
+    warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
   docker_script="${options['workdir']}/docker.sh"
   information_message "Generating docker script ${docker_script}"
+  image_file=$( basename "${options['image']}" )
+  image_file="${options['mountdir']}/build/output/images/${image_file}"
+  mount_dir="/mnt/imagefs"
   tee "${docker_script}" << DOCKER_SCRIPT
 #!/usr/bin/bash
-cp ${options['mountdir']}${options['runtime']} ${options['runtime']}
+mkdir ${mount_dir}
+export IMAGE=${image_file}
+export LOOPDEV=\$(losetup --partscan --find --show "\$IMAGE")
+lsblk --raw --output "NAME,MAJ:MIN" --noheadings \$LOOPDEV | tail -n +2 | while read dev node;
+do
+    MAJ=\$(echo \$node | cut -d: -f1)
+    MIN=\$(echo \$node | cut -d: -f2)
+    [ ! -e "/dev/\$dev" ] &&  mknod "/dev/\$dev" b \$MAJ \$MIN
+done
+mount \${LOOPDEV}p1 ${mount_dir}
+cp ${options['mountdir']}${options['runtime']} ${mount_dir}${options['runtime']}
 exit
 DOCKER_SCRIPT
   execute_command "chmod +x ${docker_script}"
@@ -886,14 +907,13 @@ execute_docker_script () {
 
 generate_config () {
   actions="$1"
-  if [[ ${actions} =~ run ]] || [ ! "${options['runtime']}" = "" ] || [[ ${options['type']} =~ run ]]; then
+  if [[ ${actions} =~ run ]] || [[ ${options['type']} =~ run ]]; then
     generate_runtime_config
   else
-    if [[ ${actions} =~ build ]] || [ ! "${options['buildtime']}" = "" ] || [[ ${options['type']} =~ build ]]; then
+    if [[ ${actions} =~ build ]] || [[ ${options['type']} =~ build ]]; then
       generate_buildtime_config
     else
       generate_docker_script
-      execute_docker_script
     fi
   fi
 }
@@ -918,6 +938,7 @@ modify_image () {
     umount_image
   else
     generate_docker_script
+    execute_docker_script
   fi
 }
 

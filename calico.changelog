@@ -212,3 +212,5 @@
 # Added docker script execution
 # 1.0.7: Mon 12 Jan 2026 22:42:16 AEDT
 # Fixed mount action
+# 1.0.8: Mon 12 Jan 2026 22:44:16 AEDT
+# Updated docker script
