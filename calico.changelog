@@ -206,3 +206,9 @@
 # Added type option
 # 1.0.4: Mon 12 Jan 2026 20:36:46 AEDT
 # Added container option
+# 1.0.5: Mon 12 Jan 2026 22:38:16 AEDT
+# Added docker script creation
+# 1.0.6: Mon 12 Jan 2026 22:40:16 AEDT
+# Added docker script execution
+# 1.0.7: Mon 12 Jan 2026 22:42:16 AEDT
+# Fixed mount action

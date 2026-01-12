@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.4
+# Version:      1.0.7
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -856,16 +856,45 @@ unmount_image () {
   execute_command "losetup -d ${loop_device}" "sudo"
 }
 
+# Function: generate_docker_script
+#
+# Generate docker script
+
+generate_docker_script () {
+  docker_script="${options['workdir']}/docker.sh"
+  information_message "Generating docker script ${docker_script}"
+  tee "${docker_script}" << DOCKER_SCRIPT
+#!/usr/bin/bash
+cp ${options['mountdir']}${options['runtime']} ${options['runtime']}
+exit
+DOCKER_SCRIPT
+  execute_command "chmod +x ${docker_script}"
+}
+
+# Function: execute_docker_script
+#
+# Execute docker script
+
+execute_docker_script () {
+  docker_script="${options['mountdir']}/docker.sh"
+  execute_command "docker run --privileged -v ${options['workdir']}:${options['mountdir']} -it ${options['container']} ${docker_script}"
+}
+
 # Function: generate_config
 #
 # Generate configuration
 
 generate_config () {
   actions="$1"
-  if [[ ${actions} =~ runtime ]] || [ ! "${options['runtime']}" = "" ] || [ "${options['type']}" = "runtime" ]; then
+  if [[ ${actions} =~ run ]] || [ ! "${options['runtime']}" = "" ] || [[ ${options['type']} =~ run ]]; then
     generate_runtime_config
   else
-    generate_buildtime_config
+    if [[ ${actions} =~ build ]] || [ ! "${options['buildtime']}" = "" ] || [[ ${options['type']} =~ build ]]; then
+      generate_buildtime_config
+    else
+      generate_docker_script
+      execute_docker_script
+    fi
   fi
 }
 
@@ -887,6 +916,8 @@ modify_image () {
     mount_image
     execute_command "cp ${options['workdir']}${options['runtime']} ${options['mountdir']}${options['runtime']}"
     umount_image
+  else
+    generate_docker_script
   fi
 }
 
@@ -1136,15 +1167,15 @@ while test $# -gt 0; do
       options['mask']="true"
       shift
       ;;
-    --mount*)                 # switch : Mount image
-      actions_list+=("mount")
-      shift
-      ;;
-    --modify*)                 # switch : Modify image
+    --modify)                 # switch : Modify image
       actions_list+=("modify")
       shift
       ;;
-    --mountdir*)              # switch : Mount directory
+    --mount|--mountimage)     # switch : Mount image
+      actions_list+=("mount")
+      shift
+      ;;
+    --mountdir)               # switch : Mount directory
       check_value "$1" "$2"
       options['mountdir']="$2"
       shift 2
