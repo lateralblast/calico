@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.2
+# Version:      1.0.3
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -1217,6 +1217,11 @@ while test $# -gt 0; do
     --timezone)               # switch : Timezone
       check_value "$1" "$2"
       options['timezone']="$2"
+      shift 2
+      ;;
+    --type)                   # switch : Configuration type
+      check_value "$1" "$2"
+      options['type']="$2"
       shift 2
       ;;
     --unmount*)               # switch : Unmount image

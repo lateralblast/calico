@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-1.0.2
+1.0.3
 
 Introduction
 ------------
@@ -109,6 +109,18 @@ Unmount image:
 
 ```bash
 ./calico.sh --unmount --image /path/to/image.img
+```
+
+Generate runtime configuration:
+
+```bash
+./calico.sh --generate --type runtime
+```
+
+Generate buildtime configuration:
+
+```bash
+./calico.sh --generate --type buildtime
 ```
 
 Notes
