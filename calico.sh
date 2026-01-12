@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.3
+# Version:      1.0.4
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -56,6 +56,7 @@ set_defaults () {
   defaults['userpassword']="armbian"                    # option : User password
   defaults['rootpassword']="armbian"                    # option : Root password
   defaults['countrycode']="AU"                          # option : Country code
+  defaults['container']="ubuntu:latest"                 # option : Container
   defaults['configure']="no"                            # option : Configure kernel
   defaults['mountdir']="/mnt/${script['name']}"         # option : Mount directory
   defaults['builddir']="${defaults['workdir']}/build"   # option : Build directory
@@ -1010,6 +1011,11 @@ while test $# -gt 0; do
     --connectwi*)             # switch : Connect to wireless
       options['connectwireless']="yes"
       shift
+      ;;
+    --container*)             # switch : Container
+      check_value "$1" "$2"
+      options['container']="$2"
+      shift 2
       ;;
     --country*)               # switch : Country code
       check_value "$1" "$2"

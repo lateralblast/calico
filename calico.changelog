@@ -204,3 +204,5 @@
 # Updated code to generate runtime configuration
 # 1.0.3: Mon 12 Jan 2026 17:44:56 AEDT
 # Added type option
+# 1.0.4: Mon 12 Jan 2026 20:36:46 AEDT
+# Added container option
