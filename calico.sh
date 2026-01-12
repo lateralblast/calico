@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.9.3
+# Version:      1.0.2
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -44,54 +44,57 @@ script['bin']=$( basename "${script['file']}" )
 # Set defaults
 
 set_defaults () {
-  flags['board']="BOARD"                              # flag : Board
-  flags['branch']="BRANCH"                            # flag : Kernel Branch
-  flags['expert']="EXPERT"                            # flag : Expert mode
-  flags['release']="RELEASE"                          # flag : Release
-  flags['minimal']="BUILD_MINIMAL"                    # flag : Minimal
-  flags['desktop']="BUILD_DESKTOP"                    # flag : Desktop
-  flags['configure']="KERNEL_CONFIGURE"               # flag : Configure kernel
-  options['workdir']="${HOME}/${script['name']}"      # option : Work directory
-  options['connectwireless']="y"                      # option : Connect to wireless
-  options['userpassword']="armbian"                   # option : User password
-  options['rootpassword']="armbian"                   # option : Root password
-  options['countrycode']="AU"                         # option : Country code
-  options['configure']="no"                           # option : Configure kernel
-  options['builddir']="${options['workdir']}/build"   # option : Build directory
-  options['ethernet']="0"                             # option : Ethernet
-  options['username']="armbian"                       # option : Username
-  options['timezone']="Australia/Melbourne"           # option : Timezone
-  options['realname']="Armbian"                       # option : Real name
-  options['netmask']="255.255.255.0"                  # option : Netmask
-  options['verbose']="false"                          # option : Verbose mode
-  options['gateway']=""                               # option : Gateway
-  options['setlang']="y"                              # option : Set language based on location
-  options['release']="noble"                          # option : Release
-  options['minimal']="yes"                            # option : Minimal
-  options['desktop']="no"                             # option : Desktop
-  options['default']="false"                          # option : Default mode
-  options['manual']="false"                           # option : Manual compile
-  options['locale']="en_AU.UTF-8"                     # option : Locale
-  options['strict']="false"                           # option : Strict mode
-  options['import']="false"                           # option : Import mode
-  options['dryrun']="false"                           # option : Dryrun mode
-  options['expert']="no"                              # option : Expert mode
-  options['branch']="current"                         # option : Branch
-  options['board']=""                                 # option : Board
-  options['flags']=""                                 # option : Compile flags
-  options['build']="minimal"                          # option : Build
-  options['debug']="false"                            # option : Debug mode
-  options['force']="false"                            # option : Force actions
-  options['ssid']="SSID"                              # option : WiFi SSID
-  options['shell']="bash"                             # option : User shell
-  options['wifi']="0"                                 # option : WiFi 
-  options['full']="false"                             # option : Full path
-  options['term']="ansi"                              # option : Terminal type
-  options['mask']="false"                             # option : Mask identifiers
-  options['dns']="8.8.8.8"                            # option : DNS
-  options['yes']="false"                              # option : Answer yes to questions
-  options['key']="KEY"                                # option : WiFi Key
-  options['ip']=""                                    # option : IP
+  flags['board']="BOARD"                                # flag : Board
+  flags['branch']="BRANCH"                              # flag : Kernel Branch
+  flags['expert']="EXPERT"                              # flag : Expert mode
+  flags['release']="RELEASE"                            # flag : Release
+  flags['minimal']="BUILD_MINIMAL"                      # flag : Minimal
+  flags['desktop']="BUILD_DESKTOP"                      # flag : Desktop
+  flags['configure']="KERNEL_CONFIGURE"                 # flag : Configure kernel
+  defaults['workdir']="${HOME}/${script['name']}"       # option : Work directory
+  defaults['connectwireless']="y"                       # option : Connect to wireless
+  defaults['userpassword']="armbian"                    # option : User password
+  defaults['rootpassword']="armbian"                    # option : Root password
+  defaults['countrycode']="AU"                          # option : Country code
+  defaults['configure']="no"                            # option : Configure kernel
+  defaults['mountdir']="/mnt/${script['name']}"         # option : Mount directory
+  defaults['builddir']="${defaults['workdir']}/build"   # option : Build directory
+  defaults['ethernet']="0"                              # option : Ethernet
+  defaults['username']="armbian"                        # option : Username
+  defaults['timezone']="Australia/Melbourne"            # option : Timezone
+  defaults['realname']="Armbian"                        # option : Real name
+  defaults['runtime']="/root/.not_logged_in_yet"        # option : Runtime config file
+  defaults['netmask']="255.255.255.0"                   # option : Netmask
+  defaults['verbose']="false"                           # option : Verbose mode
+  defaults['gateway']=""                                # option : Gateway
+  defaults['setlang']="y"                               # option : Set language based on location
+  defaults['release']="noble"                           # option : Release
+  defaults['minimal']="yes"                             # option : Minimal
+  defaults['desktop']="no"                              # option : Desktop
+  defaults['default']="false"                           # option : Default mode
+  defaults['manual']="false"                            # option : Manual compile
+  defaults['locale']="en_AU.UTF-8"                      # option : Locale
+  defaults['strict']="false"                            # option : Strict mode
+  defaults['import']="false"                            # option : Import mode
+  defaults['dryrun']="false"                            # option : Dryrun mode
+  defaults['expert']="no"                               # option : Expert mode
+  defaults['branch']="current"                          # option : Branch
+  defaults['board']=""                                  # option : Board
+  defaults['flags']=""                                  # option : Compile flags
+  defaults['type']="runtime"                            # option : Configuration type
+  defaults['build']="minimal"                           # option : Build
+  defaults['debug']="false"                             # option : Debug mode
+  defaults['force']="false"                             # option : Force actions
+  defaults['ssid']="SSID"                               # option : WiFi SSID
+  defaults['shell']="bash"                              # option : User shell
+  defaults['wifi']="0"                                  # option : WiFi 
+  defaults['full']="false"                              # option : Full path
+  defaults['term']="ansi"                               # option : Terminal type
+  defaults['mask']="false"                              # option : Mask identifiers
+  defaults['dns']="8.8.8.8"                             # option : DNS
+  defaults['yes']="false"                               # option : Answer yes to questions
+  defaults['key']="KEY"                                 # option : WiFi Key
+  defaults['ip']=""                                     # option : IP
   os['name']=$( uname -s )
   if [ "${os['name']}" = "Linux" ]; then
     lsb_check=$( command -v lsb_release )
@@ -156,11 +159,14 @@ print_message () {
 
 check_package () {
   package="$1"
+  information_message "Checking package ${package} is installed"
   if [ "${os['name']}" = "Linux" ]; then
     if [ "${os['distro']}" = "Ubuntu" ] || [ "${os['distro']}" = "Debian" ]; then
       package_check=$( dpkg -s "${package}" | grep "^Status: install ok installed" )
       if [ -z "${package_check}" ]; then
         execute_command "apt install ${package} -y" "sudo"
+      else
+        information_message "Package ${package} is installed"
       fi
     fi
   fi
@@ -168,6 +174,8 @@ check_package () {
     package_check=$( brew list | grep "${package}" )
     if [ -z "${package_check}" ]; then
       execute_command "brew install ${package}"
+    else
+      information_message "Package ${package} is installed"
     fi
   fi
 }
@@ -234,7 +242,6 @@ fi
 # Reset defaults based on command line options
 
 reset_defaults () {
-  defaults['firstrun']="${options['builddir']}/userpatches/extensions/preset-firstrun.sh"
   if [ "${options['firstrun']}" = "" ]; then
     options['firstrun']="${defaults['firstrun']}"
   fi
@@ -274,11 +281,13 @@ reset_defaults () {
     options['desktop']="no"
     options['minimal']="yes"
   fi
-  if [ "${options['verbose']}" = "true" ]; then
-    for param in "${!options[@]}"; do
-      information_message "Setting ${param} to ${options[${param}]}"
-    done
-  fi
+  for default in "${!defaults[@]}"; do
+    if [ "${options[${default}]}" = "" ]; then
+      options[${default}]=${defaults[${default}]}
+    fi
+    information_message "Setting ${default} to ${options[${default}]}"
+  done
+  defaults['firstrun']="${options['builddir']}/userpatches/extensions/preset-firstrun.sh"
 }
 
 # Function: do_exit
@@ -507,6 +516,18 @@ print_defaults () {
   done
 }
 
+# Function: check_packages
+#
+# Check packages
+
+check_packages () {
+  if [ "${os['name']}" = "Linux" ]; then
+    for package in qemu-system-arm qemu-system-riscv binfmt-support qemu-user-binfmt; do
+      check_package "${package}"
+    done
+  fi
+}
+
 # Function: check_config
 #
 # Check configuration
@@ -535,11 +556,11 @@ view_config () {
   fi
 }
 
-# Function: generate_config
+# Function: generate_buildtime_config
 #
-# Generate configuration
+# Generate buildtime configuration
 
-generate_config () {
+generate_buildtime_config () {
   check_config
   patches_dir=$( dirname "${defaults['firstrun']}" )
   if [ ! -d "${patches_dir}" ]; then
@@ -617,6 +638,69 @@ FIRSTRUN
   fi
 }
 
+# Function: generate_runtime_config
+#
+# Generate runtime configuration
+generate_runtime_config () {
+  check_config
+  runtime_file="${options['workdir']}${options['runtime']}"
+  check_dir=$( dirname "${runtime_file}" )
+  if [ ! -d "${check_dir}" ]; then
+    execute_command "mkdir -p ${check_dir}"
+  fi
+  information_message "Generating runtime configuration ${runtime_file}"
+  tee "${runtime_file}" << FIRSTRUN
+# Set PRESET_NET_CHANGE_DEFAULTS to 1 to apply any network related settings below
+PRESET_NET_CHANGE_DEFAULTS=1
+# Enable WiFi or Ethernet.
+# NB: If both are enabled, WiFi will take priority and Ethernet will be disabled.
+PRESET_NET_ETHERNET_ENABLED=${options['ethernet']}
+PRESET_NET_WIFI_ENABLED=${options['wifi']}
+
+# Enter your WiFi creds
+# SECURITY WARN: Your wifi keys will be stored in plaintext, no encryption.
+PRESET_NET_WIFI_SSID='${options['ssid']}'
+PRESET_NET_WIFI_KEY='${options['key']}'
+
+# Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+PRESET_NET_WIFI_COUNTRYCODE='${options['countrycode']}'
+
+# If you want to use a static ip, set it here
+PRESET_NET_USE_STATIC=${options['static']}
+PRESET_NET_STATIC_IP='${options['ip']}'
+PRESET_NET_STATIC_MASK='${options['netmask']}'
+PRESET_NET_STATIC_GATEWAY='${options['gateway']}'
+PRESET_NET_STATIC_DNS='${options['dns']}'
+
+# Preset user default shell, you can choose bash or  zsh
+PRESET_USER_SHELL=${options['shell']}
+
+# Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
+PRESET_CONNECT_WIRELESS=${options['connectwireless']}
+
+# Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
+SET_LANG_BASED_ON_LOCATION=${options['setlang']}
+
+# Preset default locale
+PRESET_LOCALE=${options['locale']}
+
+# Preset timezone
+PRESET_TIMEZONE=${options['timezone']}
+
+# Preset root password
+PRESET_ROOT_PASSWORD=${options['rootpassword']}
+
+# Preset username
+PRESET_USER_NAME=${options['username']}
+
+# Preset user password
+PRESET_USER_PASSWORD=${options['userpassword']}
+
+# Preset user default realname
+PRESET_DEFAULT_REALNAME=${options['realname']}
+FIRSTRUN
+}
+
 # Function: get_compile_flags
 #
 # Get compile flags
@@ -645,7 +729,7 @@ compile_image () {
     if [ "${options['default']}" = "true" ]; then
       execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
     else
-      generate_config
+      generate_buildtime_config
       execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
     fi
   fi
@@ -735,17 +819,17 @@ mount_image () {
     warning_message "Image ${options['image']} does not exist"
     do_exit
   fi
-  mount_check=$( mount | grep "/mnt/${script['name']}" )
+  mount_check=$( mount | grep "${options['mountdir']}" )
   if [ ! "${mount_check}" = "" ]; then
-    warning_message "An image is already mounted at /mnt/${script['name']}"
+    warning_message "An image is already mounted at ${options['mountdir']}"
     do_exit
   fi
   execute_command "losetup -P -f ${options['image']}" "sudo"
   loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
-  if [ ! -d "/mnt/${script['name']}" ]; then
-    execute_command "mkdir -p /mnt/${script['name']}" "sudo"
+  if [ ! -d "${options['mountdir']}" ]; then
+    execute_command "mkdir -p ${options['mountdir']}" "sudo"
   fi
-  execute_command "mount ${loop_device}p1 /mnt/${script['name']}" "sudo"
+  execute_command "mount ${loop_device}p1 ${options['mountdir']}" "sudo"
 }
 
 # Function: unmount image
@@ -761,14 +845,48 @@ unmount_image () {
     warning_message "Image ${options['image']} does not exist"
     do_exit
   fi
-  mount_check=$( mount | grep "/mnt/${script['name']}" )
+  mount_check=$( mount | grep "${options['mountdir']}" )
   if [ "${mount_check}" = "" ]; then
     warning_message "Image ${options['image']} is not mounted"
     do_exit
   fi
   loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
-  execute_command "umount /mnt/${script['name']}" "sudo"
+  execute_command "umount ${options['mountdir']}" "sudo"
   execute_command "losetup -d ${loop_device}" "sudo"
+}
+
+# Function: generate_config
+#
+# Generate configuration
+
+generate_config () {
+  actions="$1"
+  if [[ ${actions} =~ runtime ]] || [ ! "${options['runtime']}" = "" ] || [ "${options['type']}" = "runtime" ]; then
+    generate_runtime_config
+  else
+    generate_buildtime_config
+  fi
+}
+
+# Function: modify_image
+#
+# Modify image
+
+modify_image () {
+  if [ "${options['image']}" = "" ]; then
+    warning_message "Image not specified"
+    do_exit
+  fi
+  if [ ! -f "${options['image']}" ]; then
+    warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
+  generate_runtime_config
+  if [ "${os['name']}" = "Linux" ]; then
+    mount_image
+    execute_command "cp ${options['workdir']}${options['runtime']} ${options['mountdir']}${options['runtime']}"
+    umount_image
+  fi
 }
 
 # Function: process_actions
@@ -783,11 +901,12 @@ process_actions () {
       exit
       ;;
     check*)               # action : Run checks
+      check_packages
       check_config
       exit
       ;;
     gen*)                 # action : Generate configuration
-      generate_config
+      generate_config "${actions}"
       exit
       ;;
     help)                 # action : Print actions help
@@ -796,6 +915,10 @@ process_actions () {
       ;;
     list*)                # action : List - e.g. board
       list_items
+      exit
+      ;;
+    modify*)              # action : Modify image
+      modify_image
       exit
       ;;
     mount*)               # action : Mount image
@@ -1010,6 +1133,15 @@ while test $# -gt 0; do
     --mount*)                 # switch : Mount image
       actions_list+=("mount")
       shift
+      ;;
+    --modify*)                 # switch : Modify image
+      actions_list+=("modify")
+      shift
+      ;;
+    --mountdir*)              # switch : Mount directory
+      check_value "$1" "$2"
+      options['mountdir']="$2"
+      shift 2
       ;;
     --manual)                 # switch : Manual compile
       options['manual']="true"

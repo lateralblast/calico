@@ -184,3 +184,22 @@
 # Added full path option
 # 0.9.3: Mon 12 Jan 2026 12:00:21 AEDT
 # Added check_package function
+# 0.9.4: Mon 12 Jan 2026 14:02:21 AEDT
+# Updated firstrun file creation
+# 0.9.5: Mon 12 Jan 2026 14:05:21 AEDT
+# Updated reset_defaults function
+# 0.9.6: Mon 12 Jan 2026 16:33:43 AEDT
+# Added check_packages function
+# 0.9.7: Mon 12 Jan 2026 16:52:21 AEDT
+# Added mountdir option
+# 0.9.8: Mon 12 Jan 2026 17:16:16 AEDT
+# Added initial code to modify image
+# 0.9.9: Mon 12 Jan 2026 17:17:16 AEDT
+# Updated mount and unmount functions
+# 1.0.0: Mon 12 Jan 2026 17:37:06 AEDT
+# Updated code to generate configuration
+# 1.0.1: Mon 12 Jan 2026 17:40:06 AEDT
+# Added type option
+# 1.0.2: Mon 12 Jan 2026 17:42:56 AEDT
+# Updated code to generate runtime configuration
+
