@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      0.9.1
+# Version:      0.9.3
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -146,6 +146,28 @@ print_message () {
         fi
         echo -e "${format}:${tabs}${message}"
       fi
+    fi
+  fi
+}
+
+# Function: check_package
+#
+# Check package
+
+check_package () {
+  package="$1"
+  if [ "${os['name']}" = "Linux" ]; then
+    if [ "${os['distro']}" = "Ubuntu" ] || [ "${os['distro']}" = "Debian" ]; then
+      package_check=$( dpkg -s "${package}" | grep "^Status: install ok installed" )
+      if [ -z "${package_check}" ]; then
+        execute_command "apt install ${package} -y" "sudo"
+      fi
+    fi
+  fi
+  if [ "${os['name']}" = "Darwin" ]; then
+    package_check=$( brew list | grep "${package}" )
+    if [ -z "${package_check}" ]; then
+      execute_command "brew install ${package}"
     fi
   fi
 }

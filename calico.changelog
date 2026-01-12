@@ -180,4 +180,7 @@
 # Fixed loop_device handling
 # 0.9.1: Sun 11 Jan 2026 17:56:49 AEDT
 # Added mount and unmount checks
-
+# 0.9.2: Mon 12 Jan 2026 11:58:21 AEDT
+# Added full path option
+# 0.9.3: Mon 12 Jan 2026 12:00:21 AEDT
+# Added check_package function

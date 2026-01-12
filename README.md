@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-0.9.1
+0.9.3
 
 Introduction
 ------------
@@ -81,6 +81,12 @@ List images:
 ./calico.sh --list images
 ```
 
+List images with full path:
+
+```bash
+./calico.sh --list images --full
+```
+
 Manual compile:
 
 ```bash
@@ -103,4 +109,30 @@ Unmount image:
 
 ```bash
 ./calico.sh --unmount --image /path/to/image.img
+```
+
+Notes
+-----
+
+An example of manually mounting an image on Linux:
+
+```bash
+sudo losetup -P /dev/lopp0 -f /path/to/image.img
+sudo mount /dev/loop0p1 /mnt
+```
+
+An example of manually unmounting an image on MacOS:
+
+```bash
+docker run --privileged -v /path/to/image:/mnt/image -it ubuntu:latest bash
+mkdir /mnt/imagefs
+export IMAGE=/path/to/image.img
+export LOOPDEV=$(losetup --partscan --find --show "$IMAGE")
+lsblk --raw --output "NAME,MAJ:MIN" --noheadings $LOOPDEV | tail -n +2 | while read dev node;
+do
+    MAJ=$(echo $node | cut -d: -f1)
+    MIN=$(echo $node | cut -d: -f2)
+    [ ! -e "/dev/$dev" ] &&  mknod "/dev/$dev" b $MAJ $MIN
+done
+mount ${LOOPDEV}p1 /mnt/imagefs
 ```
