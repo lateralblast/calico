@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.8
+# Version:      1.0.9
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -877,8 +877,11 @@ generate_docker_script () {
   tee "${docker_script}" << DOCKER_SCRIPT
 #!/usr/bin/bash
 mkdir ${mount_dir}
-export IMAGE=${image_file}
-export LOOPDEV=\$(losetup --partscan --find --show "\$IMAGE")
+for dev in \$( seq 4 ); do
+  losetup -d /dev/loop\$dev
+done
+IMAGE=${image_file}
+LOOPDEV=\$( losetup --partscan --find --show \$IMAGE )
 lsblk --raw --output "NAME,MAJ:MIN" --noheadings \$LOOPDEV | tail -n +2 | while read dev node;
 do
     MAJ=\$(echo \$node | cut -d: -f1)
@@ -887,6 +890,8 @@ do
 done
 mount \${LOOPDEV}p1 ${mount_dir}
 cp ${options['mountdir']}${options['runtime']} ${mount_dir}${options['runtime']}
+umount ${mount_dir}
+losetup -d \$LOOPDEV
 exit
 DOCKER_SCRIPT
   execute_command "chmod +x ${docker_script}"

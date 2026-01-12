@@ -214,3 +214,6 @@
 # Fixed mount action
 # 1.0.8: Mon 12 Jan 2026 22:44:16 AEDT
 # Updated docker script
+# 1.0.9: Mon 12 Jan 2026 23:26:16 AEDT
+# Added cleanup of loop devices to docker script
+

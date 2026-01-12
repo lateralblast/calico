@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-1.0.8
+1.0.9
 
 Introduction
 ------------
