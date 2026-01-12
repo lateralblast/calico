@@ -147,7 +147,7 @@ sudo losetup -P /dev/lopp0 -f /path/to/image.img
 sudo mount /dev/loop0p1 /mnt
 ```
 
-An example of manually unmounting an image on MacOS:
+An example of manually mounting an image on MacOS:
 
 ```bash
 docker run --privileged -v /path/to/image:/mnt/image -it ubuntu:latest bash
