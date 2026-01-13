@@ -216,4 +216,6 @@
 # Updated docker script
 # 1.0.9: Mon 12 Jan 2026 23:26:16 AEDT
 # Added cleanup of loop devices to docker script
+# 1.1.0: Tue 13 Jan 2026 11:16:16 AEDT
+# Fixed bugs with mount and unmount actions
 

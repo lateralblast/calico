@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.0.9
+# Version:      1.1.0
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -823,13 +823,22 @@ mount_image () {
   mount_check=$( mount | grep "${options['mountdir']}" )
   if [ ! "${mount_check}" = "" ]; then
     warning_message "An image is already mounted at ${options['mountdir']}"
-    do_exit
+    information_message "Unmounting image"
+    unmount_image
   fi
+  for loop_device in $( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: ); do
+    information_message "Cleaning up previous loop device ${loop_device}"
+    execute_command "losetup -d ${loop_device}" "sudo"
+  done
+  information_message "Determining loop device for image"
   execute_command "losetup -P -f ${options['image']}" "sudo"
   loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
+  information_message "Attached to loop device ${loop_device}"
   if [ ! -d "${options['mountdir']}" ]; then
+    information_message "Creating mount directory ${options['mountdir']}"
     execute_command "mkdir -p ${options['mountdir']}" "sudo"
   fi
+  information_message "Mounting image to ${options['mountdir']}"
   execute_command "mount ${loop_device}p1 ${options['mountdir']}" "sudo"
 }
 
@@ -851,9 +860,12 @@ unmount_image () {
     warning_message "Image ${options['image']} is not mounted"
     do_exit
   fi
-  loop_device=$( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: )
+  information_message "Unmounting image from ${options['mountdir']}"
   execute_command "umount ${options['mountdir']}" "sudo"
-  execute_command "losetup -d ${loop_device}" "sudo"
+  for loop_device in $( losetup -a | grep "${options['image']}" | awk '{print $1}' |cut -f1 -d: ); do
+    information_message "Cleaning up loop device ${loop_device}"
+    execute_command "losetup -d ${loop_device}" "sudo"
+  done
 }
 
 # Function: generate_docker_script
@@ -939,8 +951,8 @@ modify_image () {
   generate_runtime_config
   if [ "${os['name']}" = "Linux" ]; then
     mount_image
-    execute_command "cp ${options['workdir']}${options['runtime']} ${options['mountdir']}${options['runtime']}"
-    umount_image
+    execute_command "cp ${options['workdir']}${options['runtime']} ${options['mountdir']}${options['runtime']}" "sudo"
+    unmount_image
   else
     generate_docker_script
     execute_docker_script
