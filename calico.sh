@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.1.0
+# Version:      1.1.2
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -73,6 +73,7 @@ set_defaults () {
   defaults['minimal']="yes"                             # option : Minimal
   defaults['desktop']="no"                              # option : Desktop
   defaults['default']="false"                           # option : Default mode
+  defaults['device']=""                                 # option : Device
   defaults['manual']="false"                            # option : Manual compile
   defaults['locale']="en_AU.UTF-8"                      # option : Locale
   defaults['strict']="false"                            # option : Strict mode
@@ -595,45 +596,45 @@ function post_family_tweaks__preset_configs() {
 
   #Enter your WiFi creds
   #      SECURITY WARN: Your wifi keys will be stored in plaintext, no encryption.
-  echo "PRESET_NET_WIFI_SSID='${options['ssid']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_WIFI_KEY='${options['key']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_WIFI_SSID=\"${options['ssid']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_WIFI_KEY=\"${options['key']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   #      Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
-  echo "PRESET_NET_WIFI_COUNTRYCODE='${options['countrycode']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_WIFI_COUNTRYCODE=\"${options['countrycode']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   #If you want to use a static ip, set it here
   echo "PRESET_NET_USE_STATIC=${options['static']}" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_IP='${options['ip']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_MASK='${options['netmask']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_GATEWAY='${options['gateway']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_DNS='${options['dns']}'" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_IP=\"${options['ip']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_MASK=\"${options['netmask']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_GATEWAY=\"${options['gateway']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_NET_STATIC_DNS=\"${options['dns']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset user default shell, you can choose bash or  zsh
-  echo "PRESET_USER_SHELL=${options['shell']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_USER_SHELL=\"${options['shell']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
-  echo "PRESET_CONNECT_WIRELESS=${options['connectwireless']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_CONNECT_WIRELESS=\"${options['connectwireless']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
-  echo "SET_LANG_BASED_ON_LOCATION=${options['setlang']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "SET_LANG_BASED_ON_LOCATION=\"${options['setlang']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset default locale
-  echo "PRESET_LOCALE=${options['locale']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_LOCALE=\"${options['locale']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset timezone
-  echo "PRESET_TIMEZONE=${options['timezone']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_TIMEZONE=\"${options['timezone']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset root password
-  echo "PRESET_ROOT_PASSWORD=${options['rootpassword']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_ROOT_PASSWORD=\"${options['rootpassword']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset username
-  echo "PRESET_USER_NAME=${options['username']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_USER_NAME=\"${options['username']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset user password
-  echo "PRESET_USER_PASSWORD=${options['userpassword']}" >> "\${SDCARD}"/root/.not_logged_in_yet
+  echo "PRESET_USER_PASSWORD=\"${options['userpassword']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
 
   # Preset user default realname
-  echo "PRESET_DEFAULT_REALNAME=${options['realname']}" >> "\${SDCARD}"/root/.not_logged_in_yet    
+  echo "PRESET_DEFAULT_REALNAME=\"${options['realname']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet    
 }
 FIRSTRUN
   fi
@@ -664,41 +665,41 @@ PRESET_NET_WIFI_SSID='${options['ssid']}'
 PRESET_NET_WIFI_KEY='${options['key']}'
 
 # Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
-PRESET_NET_WIFI_COUNTRYCODE='${options['countrycode']}'
+PRESET_NET_WIFI_COUNTRYCODE="${options['countrycode']}"
 
 # If you want to use a static ip, set it here
 PRESET_NET_USE_STATIC=${options['static']}
-PRESET_NET_STATIC_IP='${options['ip']}'
-PRESET_NET_STATIC_MASK='${options['netmask']}'
-PRESET_NET_STATIC_GATEWAY='${options['gateway']}'
-PRESET_NET_STATIC_DNS='${options['dns']}'
+PRESET_NET_STATIC_IP="${options['ip']}"
+PRESET_NET_STATIC_MASK="${options['netmask']}"
+PRESET_NET_STATIC_GATEWAY="${options['gateway']}"
+PRESET_NET_STATIC_DNS="${options['dns']}"
 
-# Preset user default shell, you can choose bash or  zsh
-PRESET_USER_SHELL=${options['shell']}
+# Preset user default shell, you can choose bash or zsh
+PRESET_USER_SHELL="${options['shell']}"
 
 # Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
-PRESET_CONNECT_WIRELESS=${options['connectwireless']}
+PRESET_CONNECT_WIRELESS="${options['connectwireless']}"
 
 # Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
-SET_LANG_BASED_ON_LOCATION=${options['setlang']}
+SET_LANG_BASED_ON_LOCATION="${options['setlang']}"
 
 # Preset default locale
-PRESET_LOCALE=${options['locale']}
+PRESET_LOCALE="${options['locale']}"
 
 # Preset timezone
-PRESET_TIMEZONE=${options['timezone']}
+PRESET_TIMEZONE="${options['timezone']}"
 
 # Preset root password
-PRESET_ROOT_PASSWORD=${options['rootpassword']}
+PRESET_ROOT_PASSWORD="${options['rootpassword']}"
 
 # Preset username
-PRESET_USER_NAME=${options['username']}
+PRESET_USER_NAME="${options['username']}"
 
 # Preset user password
-PRESET_USER_PASSWORD=${options['userpassword']}
+PRESET_USER_PASSWORD="${options['userpassword']}"
 
 # Preset user default realname
-PRESET_DEFAULT_REALNAME=${options['realname']}
+PRESET_DEFAULT_REALNAME="${options['realname']}"
 FIRSTRUN
 }
 
@@ -959,6 +960,36 @@ modify_image () {
   fi
 }
 
+# Function: write_image
+#
+# Write image to device
+
+write_image () {
+  if [[ ! ${options['device']} =~ dev ]] ; then
+    options['device']="/dev/${options['device']}"
+  fi
+  if [ ! -f "${options['image']}" ]; then
+    warning_message "Image ${options['image']} does not exist"
+    do_exit
+  fi
+  if [ "${options['device']}" = "" ]; then
+    warning_message "Device not specified"
+    do_exit
+  fi
+  if [ ! -b "${options['device']}" ]; then
+    warning_message "Device ${options['device']} does not exist"
+    do_exit
+  fi
+  device=$( basename "${options['device']}" )
+  transport=$( lsblk --output NAME,TRAN "${options['device']}" | grep "^${device}" | awk '{print $2}' )
+  if [ ! "${transport}" = "usb" ]; then
+    warning_message "Device ${options['device']} is not a USB device"
+    do_exit
+  fi
+  information_message "Writing image ${options['image']} to device ${options['device']}"
+  execute_command "dd if=${options['image']} of=${options['device']} bs=4M status=progress" "sudo"
+}
+
 # Function: process_actions
 #
 # Handle actions
@@ -1021,6 +1052,10 @@ process_actions () {
       ;;
     view*)                # action : View configuration
       view_config
+      exit
+      ;;
+    write*)               # action : Write image to device
+      write_image
       exit
       ;;
     *)
@@ -1103,6 +1138,11 @@ while test $# -gt 0; do
       options['desktop']="yes"
       options['minimal']="no"
       shift
+      ;;
+    --device*)                # switch : Device
+      check_value "$1" "$2"
+      options['device']="$2"
+      shift 2
       ;;
     --dhcp*)                  # switch : Enable DHCP
       options['static']="0"
@@ -1340,6 +1380,10 @@ while test $# -gt 0; do
       check_value "$1" "$2"
       options['workdir']="$2"
       shift 2
+      ;;
+    --write*)               # switch : Write image to device
+      actions_list+=("write")
+      shift
       ;;
     *)
       print_help
