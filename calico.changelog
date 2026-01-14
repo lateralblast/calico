@@ -226,3 +226,21 @@
 # Added check for device type
 # 1.1.4: Tue 13 Jan 2026 18:32:20 AEDT
 # Fixes to install configuration
+# 1.1.5: Tue 13 Jan 2026 18:34:20 AEDT
+# Added sshkey and sshkeyfile options
+# 1.1.6: Tue 13 Jan 2026 20:05:59 AEDT
+# Added function to get SSH key
+# 1.1.7: Tue 13 Jan 2026 20:20:48 AEDT
+# Added OS home directory
+# 1.1.8: Tue 13 Jan 2026 20:22:48 AEDT
+# Added SSH key config
+# 1.1.9: Tue 13 Jan 2026 20:24:48 AEDT
+# Added hostname option
+# 1.2.0: Tue 13 Jan 2026 20:26:48 AEDT
+# Added provisioning script
+# 1.2.1: Tue 13 Jan 2026 21:19:13 AEDT
+# Added hostname to provisioning and runtime script paths
+# 1.2.2: Tue 13 Jan 2026 21:29:13 AEDT
+# Added packages option
+# 1.2.3: Tue 13 Jan 2026 21:38:13 AEDT
+# Added redo option

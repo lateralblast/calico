@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-1.1.2
+1.2.3
 
 Introduction
 ------------
@@ -37,6 +37,14 @@ The goals of this script are to:
 Provide a command line processor that:
 
 - Can configure network and other settings in the Armbian image.
+
+Status
+------
+
+Currently the custom build (i.e. setting IP etc) is working for modifying existing images.
+Doing a custom build with the compile option still needs work.
+As such it is recommended to use the compile option to generate the image, 
+and then run the modify option on the image created if you want a custom build.
 
 Requirements
 ------------

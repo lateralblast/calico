@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.1.2
+# Version:      1.2.3
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -44,6 +44,7 @@ script['bin']=$( basename "${script['file']}" )
 # Set defaults
 
 set_defaults () {
+  # flags
   flags['board']="BOARD"                                # flag : Board
   flags['branch']="BRANCH"                              # flag : Kernel Branch
   flags['expert']="EXPERT"                              # flag : Expert mode
@@ -51,16 +52,21 @@ set_defaults () {
   flags['minimal']="BUILD_MINIMAL"                      # flag : Minimal
   flags['desktop']="BUILD_DESKTOP"                      # flag : Desktop
   flags['configure']="KERNEL_CONFIGURE"                 # flag : Configure kernel
+  # defaults
   defaults['workdir']="${HOME}/${script['name']}"       # option : Work directory
   defaults['connectwireless']="y"                       # option : Connect to wireless
   defaults['userpassword']="armbian"                    # option : User password
   defaults['rootpassword']="armbian"                    # option : Root password
   defaults['countrycode']="AU"                          # option : Country code
+  defaults['sshkeyfile']=""                             # option : SSH key file
   defaults['container']="ubuntu:latest"                 # option : Container
   defaults['configure']="no"                            # option : Configure kernel
+  defaults['provision']="/root/provisioning.sh"         # option : Provisioning script
   defaults['mountdir']="/mnt/${script['name']}"         # option : Mount directory
   defaults['builddir']="${defaults['workdir']}/build"   # option : Build directory
   defaults['ethernet']="0"                              # option : Ethernet
+  defaults['packages']="net-tools"                      # option : Packages to install
+  defaults['hostname']="armbian"                        # option : Hostname
   defaults['username']="armbian"                        # option : Username
   defaults['timezone']="Australia/Melbourne"            # option : Timezone
   defaults['realname']="Armbian"                        # option : Real name
@@ -74,6 +80,8 @@ set_defaults () {
   defaults['desktop']="no"                              # option : Desktop
   defaults['default']="false"                           # option : Default mode
   defaults['device']=""                                 # option : Device
+  defaults['static']="0"                                # option : Static IP
+  defaults['sshkey']=""                                 # option : SSH key
   defaults['manual']="false"                            # option : Manual compile
   defaults['locale']="en_AU.UTF-8"                      # option : Locale
   defaults['strict']="false"                            # option : Strict mode
@@ -93,10 +101,13 @@ set_defaults () {
   defaults['full']="false"                              # option : Full path
   defaults['term']="ansi"                               # option : Terminal type
   defaults['mask']="false"                              # option : Mask identifiers
+  defaults['redo']="false"                              # option : Redo configuration
   defaults['dns']="8.8.8.8"                             # option : DNS
   defaults['yes']="false"                               # option : Answer yes to questions
   defaults['key']="KEY"                                 # option : WiFi Key
   defaults['ip']=""                                     # option : IP
+  # OS parameters
+  os['home']="${HOME}"
   os['name']=$( uname -s )
   if [ "${os['name']}" = "Linux" ]; then
     lsb_check=$( command -v lsb_release )
@@ -244,6 +255,16 @@ fi
 # Reset defaults based on command line options
 
 reset_defaults () {
+  get_ssh_key
+  for method in runtime buildtime provision; do
+    if [ ! "${options[${method}]}" = "" ]; then
+      file_name="${options[${method}]}"
+      if [ ! -f "${file_name}" ]; then
+        warning_message "File ${file_name} not found"
+        do_exit
+      fi
+    fi
+  done
   if [ "${options['firstrun']}" = "" ]; then
     options['firstrun']="${defaults['firstrun']}"
   fi
@@ -446,6 +467,22 @@ print_usage () {
   esac
 }
 
+# Function: get_ssh_key
+#
+# Get SSH key
+
+get_ssh_key () {
+  if [ "${options['sshkeyfile']}" = "" ]; then
+    options['sshkeyfile']=$( find "${os['home']}/.ssh" -name "*.pub" | head -1 )
+  fi
+  information_message "Setting key file to \"${options['sshkeyfile']}\""
+  if [ "${options['sshkey']}" = "" ]; then
+    if [ ! "${options['sshkeyfile']}" = "" ]; then
+      options['sshkey']=$( cat "${options['sshkeyfile']}" )
+    fi
+  fi
+}
+
 # Function: print_version
 #
 # Print version information
@@ -635,6 +672,9 @@ function post_family_tweaks__preset_configs() {
 
   # Preset user default realname
   echo "PRESET_DEFAULT_REALNAME=\"${options['realname']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet    
+
+  # Preset user SSH key
+  echo "PRESET_USER_KEY=\"${options['sshkey']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet    
 }
 FIRSTRUN
   fi
@@ -645,7 +685,7 @@ FIRSTRUN
 # Generate runtime configuration
 generate_runtime_config () {
   check_config
-  runtime_file="${options['workdir']}${options['runtime']}"
+  runtime_file="${options['workdir']}/${options['hostname']}${options['runtime']}"
   check_dir=$( dirname "${runtime_file}" )
   if [ ! -d "${check_dir}" ]; then
     execute_command "mkdir -p ${check_dir}"
@@ -700,7 +740,33 @@ PRESET_USER_PASSWORD="${options['userpassword']}"
 
 # Preset user default realname
 PRESET_DEFAULT_REALNAME="${options['realname']}"
+
+# Preset user SSH key
+PRESET_USER_KEY="${options['sshkey']}"
+
 FIRSTRUN
+}
+
+# Function: generate_provisioning_script
+#
+# Generate provisioning script
+
+generate_provisioning_script () {
+  check_config
+  provisioning_script="${options['workdir']}/${options['hostname']}${options['provision']}"
+  check_dir=$( dirname "${provisioning_script}" )
+  if [ ! -d "${check_dir}" ]; then
+    execute_command "mkdir -p ${check_dir}"
+  fi
+  information_message "Generating provisioning script ${provisioning_script}"
+  tee "${provisioning_script}" << PROVISION
+#!/bin/bash
+echo "Provisioning started"
+apt update && apt install -y ${options['packages']}
+hostnamectl set-hostname ${options['hostname']}
+echo "Provisioning complete"
+
+PROVISION
 }
 
 # Function: get_compile_flags
@@ -931,7 +997,11 @@ generate_config () {
     if [[ ${actions} =~ build ]] || [[ ${options['type']} =~ build ]]; then
       generate_buildtime_config
     else
-      generate_docker_script
+      if [[ ${actions} =~ pro ]] || [[ ${options['type']} =~ pro ]]; then
+        generate_provisioning_script
+      else
+        generate_docker_script
+      fi
     fi
   fi
 }
@@ -949,10 +1019,14 @@ modify_image () {
     warning_message "Image ${options['image']} does not exist"
     do_exit
   fi
-  generate_runtime_config
+  if [ "${options['redo']}" = "false" ]; then
+    generate_runtime_config
+    generate_provisioning_script
+  fi
   if [ "${os['name']}" = "Linux" ]; then
     mount_image
-    execute_command "cp ${options['workdir']}${options['runtime']} ${options['mountdir']}${options['runtime']}" "sudo"
+    execute_command "cp ${options['workdir']}/${options['hostname']}${options['runtime']} ${options['mountdir']}${options['runtime']}" "sudo"
+    execute_command "cp ${options['workdir']}/${options['hostname']}${options['provision']} ${options['mountdir']}${options['runtime']}" "sudo"
     unmount_image
   else
     generate_docker_script
@@ -1209,6 +1283,11 @@ while test $# -gt 0; do
       shift
       exit
       ;;
+    --hostname)               # switch : Hostname
+      check_value "$1" "$2"
+      options['hostname']="$2"
+      shift 2
+      ;;
     --import)                 # switch : Import configuration
       options['import']="true"
       shift
@@ -1279,6 +1358,16 @@ while test $# -gt 0; do
       options_list+=("$2")
       shift 2
       ;;
+    --package*)                # switch : Packages to install
+      check_value "$1" "$2"
+      options['packages']="$2"
+      shift 2
+      ;;
+    --provision*)             # switch : Provisioning script
+      check_value "$1" "$2"
+      options['provision']="$2"
+      shift 2
+      ;;
     --realname)               # switch : User Real name
       check_value "$1" "$2"
       options['realname']="$2"
@@ -1286,6 +1375,10 @@ while test $# -gt 0; do
       ;;
     --recompile*)             # switch : Recompile image - Use existing config
       actions_list+=("recompile")
+      shift
+      ;;
+    --redo)                   # switch : Redo configuration - Use last generated config
+      options['redo']="true"
       shift
       ;;
     --release*)               # switch : Release
@@ -1309,6 +1402,16 @@ while test $# -gt 0; do
     --shell)                  # switch : User shell
       check_value "$1" "$2"
       options['shell']="$2"
+      shift 2
+      ;;
+    --sshkey)                 # switch : SSH key
+      check_value "$1" "$2"
+      options['sshkey']="$2"
+      shift 2
+      ;;
+    --sshkeyfile)             # switch : SSH key file
+      check_value "$1" "$2"
+      options['sshkeyfile']="$2"
       shift 2
       ;;
     --ssid)                   # switch : WiFi SSID
