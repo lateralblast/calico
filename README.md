@@ -70,6 +70,21 @@ The script works on both Linux and MacOS.
 On Linux it uses the native tools to mount and modify the image.
 On MacOS it uses Docker to mount and modify the image.
 
+The script will clone the git repository for the Armbian build system if it is not already cloned.
+
+The general process for building an image is:
+
+1. Compile the image
+2. Mount the image
+3. Modify the image
+4. Unmount the image
+5. Write the image
+6. Test the image
+
+The script will do some sanity checks:
+
+- Check if the write device is a USB device
+
 Requirements
 ------------
 
@@ -139,6 +154,15 @@ Modify existing image's IP, gateway, DNS, etc:
 ```bash
 ./calico.sh --modify --image /path/to/image.img --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
 ```
+
+Write image:
+
+```bash
+./calico.sh --write --image /path/to/image.img --device /dev/sdb
+```
+
+Examples for Troubleshooting
+----------------------------
 
 Mount image:
 
