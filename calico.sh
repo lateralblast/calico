@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Name:         calico (Cli for Armbian Linux Image COnfiguration)
-# Version:      1.2.3
+# Version:      1.4.9
 # Release:      1
 # License:      CC-BA (Creative Commons By Attribution)
 #               http://creativecommons.org/licenses/by/4.0/legalcode
@@ -39,6 +39,26 @@ script['path']=$( dirname "${script['file']}" )
 script['modulepath']="${script['path']}/modules"
 script['bin']=$( basename "${script['file']}" )
 
+# Function: get_cidr_from_netmask
+#
+# Get CIDR from netmask
+
+get_cidr_from_netmask () {
+  netmask="$1"
+  cidr=$( ipcalc "1.1.1.1" "${netmask}" | grep ^Netmask | awk '{print $4}' )
+  echo "${cidr}"
+}
+
+# Function: get_netmask_from_cidr
+#
+# Get netmask from CIDR
+
+get_netmask_from_cidr () {
+  cidr="$1"
+  netmask=$( ipcalc "1.1.1.1/${cidr}" | grep ^Netmask | awk '{print $2}' )
+  echo "${netmask}"
+}
+
 # Function: set_defaults
 #
 # Set defaults
@@ -54,57 +74,61 @@ set_defaults () {
   flags['configure']="KERNEL_CONFIGURE"                 # flag : Configure kernel
   # defaults
   defaults['workdir']="${HOME}/${script['name']}"       # option : Work directory
-  defaults['connectwireless']="y"                       # option : Connect to wireless
+  defaults['usersshkeyfile']=""                         # option : User SSH key file
+  defaults['rootsshkeyfile']=""                         # option : Root SSH key file
   defaults['userpassword']="armbian"                    # option : User password
   defaults['rootpassword']="armbian"                    # option : Root password
+  defaults['sudopassword']="false"                      # option : Sudo password
+  defaults['usergroupid']=""                            # option : User group ID
   defaults['countrycode']="AU"                          # option : Country code
-  defaults['sshkeyfile']=""                             # option : SSH key file
+  defaults['usersshkey']=""                             # option : User SSH key
+  defaults['rootsshkey']=""                             # option : Root SSH key
   defaults['container']="ubuntu:latest"                 # option : Container
   defaults['configure']="no"                            # option : Configure kernel
   defaults['provision']="/root/provisioning.sh"         # option : Provisioning script
+  defaults['usershell']="/usr/bin/bash"                 # option : User shell
+  defaults['usergroup']="armbian"                       # option : User group
+  defaults['username']="armbian"                        # option : Username
+  defaults['userhome']="/home/${defaults['username']}"  # option : User home
   defaults['mountdir']="/mnt/${script['name']}"         # option : Mount directory
   defaults['builddir']="${defaults['workdir']}/build"   # option : Build directory
-  defaults['ethernet']="0"                              # option : Ethernet
   defaults['packages']="net-tools"                      # option : Packages to install
   defaults['hostname']="armbian"                        # option : Hostname
-  defaults['username']="armbian"                        # option : Username
   defaults['timezone']="Australia/Melbourne"            # option : Timezone
   defaults['realname']="Armbian"                        # option : Real name
-  defaults['runtime']="/root/.not_logged_in_yet"        # option : Runtime config file
   defaults['netmask']="255.255.255.0"                   # option : Netmask
   defaults['verbose']="false"                           # option : Verbose mode
   defaults['gateway']=""                                # option : Gateway
-  defaults['setlang']="y"                               # option : Set language based on location
+  defaults['expert']="yes"                              # option : Expert mode
   defaults['release']="noble"                           # option : Release
   defaults['minimal']="yes"                             # option : Minimal
   defaults['desktop']="no"                              # option : Desktop
   defaults['default']="false"                           # option : Default mode
+  defaults['netplan']="/etc/netplan/01-netcfg.yaml"     # option : Netplan
+  defaults['bridged']="false"                           # option : Bridged mode
+  defaults['bridge']="br0"                              # option : Network bridge
+  defaults['userid']=""                                 # option : User ID
   defaults['device']=""                                 # option : Device
-  defaults['static']="0"                                # option : Static IP
-  defaults['sshkey']=""                                 # option : SSH key
+  defaults['static']="false"                            # option : Static IP
   defaults['manual']="false"                            # option : Manual compile
   defaults['locale']="en_AU.UTF-8"                      # option : Locale
   defaults['strict']="false"                            # option : Strict mode
   defaults['import']="false"                            # option : Import mode
   defaults['dryrun']="false"                            # option : Dryrun mode
-  defaults['expert']="no"                               # option : Expert mode
   defaults['branch']="current"                          # option : Branch
   defaults['board']=""                                  # option : Board
   defaults['flags']=""                                  # option : Compile flags
-  defaults['type']="runtime"                            # option : Configuration type
   defaults['build']="minimal"                           # option : Build
   defaults['debug']="false"                             # option : Debug mode
   defaults['force']="false"                             # option : Force actions
-  defaults['ssid']="SSID"                               # option : WiFi SSID
-  defaults['shell']="bash"                              # option : User shell
-  defaults['wifi']="0"                                  # option : WiFi 
   defaults['full']="false"                              # option : Full path
+  defaults['cidr']="24"                                 # option : CIDR
   defaults['term']="ansi"                               # option : Terminal type
   defaults['mask']="false"                              # option : Mask identifiers
   defaults['redo']="false"                              # option : Redo configuration
   defaults['dns']="8.8.8.8"                             # option : DNS
   defaults['yes']="false"                               # option : Answer yes to questions
-  defaults['key']="KEY"                                 # option : WiFi Key
+  defaults['nic']="first"                               # option : Network interface
   defaults['ip']=""                                     # option : IP
   # OS parameters
   os['home']="${HOME}"
@@ -255,16 +279,13 @@ fi
 # Reset defaults based on command line options
 
 reset_defaults () {
-  get_ssh_key
-  for method in runtime buildtime provision; do
-    if [ ! "${options[${method}]}" = "" ]; then
-      file_name="${options[${method}]}"
-      if [ ! -f "${file_name}" ]; then
-        warning_message "File ${file_name} not found"
-        do_exit
-      fi
+  get_user_ssh_key
+  if [ ! "${options['provision']}" = "" ]; then
+    if [ ! -f "${options['provision']}" ]; then
+      warning_message "File ${options['provision']} not found"
+      do_exit
     fi
-  done
+  fi
   if [ "${options['firstrun']}" = "" ]; then
     options['firstrun']="${defaults['firstrun']}"
   fi
@@ -304,13 +325,31 @@ reset_defaults () {
     options['desktop']="no"
     options['minimal']="yes"
   fi
+  if [ "${options['cidr']}" = "" ] && [ ! "${options['netmask']}" = "" ]; then
+    options['cidr']="$( get_cidr_from_netmask "${options['netmask']}" )"
+  fi
+  if [ "${options['netmask']}" = "" ] && [ ! "${options['cidr']}" = "" ]; then
+    options['netmask']="$( get_netmask_from_cidr "${options['cidr']}" )"
+  fi
   for default in "${!defaults[@]}"; do
     if [ "${options[${default}]}" = "" ]; then
       options[${default}]=${defaults[${default}]}
     fi
     information_message "Setting ${default} to ${options[${default}]}"
   done
+  shell_test=$( dirname "${options['usershell']}" )
+  if [ "${shell_test}" = "." ]; then
+    options['usershell']="/usr/bin/${options['usershell']}"
+  fi
   defaults['firstrun']="${options['builddir']}/userpatches/extensions/preset-firstrun.sh"
+  if [ "${options['static']}" = "true" ]; then
+    for param in ip gateway dns cidr netmask; do
+      if [ "${options[${param}]}" = "" ]; then
+        warning_message "${param} is required for static IP"
+        do_exit
+      fi
+    done
+  fi
 }
 
 # Function: do_exit
@@ -467,18 +506,34 @@ print_usage () {
   esac
 }
 
-# Function: get_ssh_key
+# Function: get_user_ssh_key
 #
-# Get SSH key
+# Get user SSH key
 
-get_ssh_key () {
-  if [ "${options['sshkeyfile']}" = "" ]; then
-    options['sshkeyfile']=$( find "${os['home']}/.ssh" -name "*.pub" | head -1 )
+get_user_ssh_key () {
+  if [ "${options['usersshkeyfile']}" = "" ]; then
+    options['usersshkeyfile']=$( find "${os['home']}/.ssh" -name "*.pub" | head -1 )
   fi
-  information_message "Setting key file to \"${options['sshkeyfile']}\""
-  if [ "${options['sshkey']}" = "" ]; then
-    if [ ! "${options['sshkeyfile']}" = "" ]; then
-      options['sshkey']=$( cat "${options['sshkeyfile']}" )
+  information_message "Setting key file to \"${options['usersshkeyfile']}\""
+  if [ "${options['usersshkey']}" = "" ]; then
+    if [ ! "${options['usersshkeyfile']}" = "" ]; then
+      options['usersshkey']=$( cat "${options['usersshkeyfile']}" )
+    fi
+  fi
+}
+
+# Function: get_root_ssh_key
+#
+# Get root SSH key
+
+get_root_ssh_key () {
+  if [ "${options['rootsshkeyfile']}" = "" ]; then
+    options['rootsshkeyfile']=$( find "${os['home']}/.ssh" -name "*.pub" | head -1 )
+  fi
+  information_message "Setting key file to \"${options['rootsshkeyfile']}\""
+  if [ "${options['rootsshkey']}" = "" ]; then
+    if [ ! "${options['rootsshkeyfile']}" = "" ]; then
+      options['rootsshkey']=$( cat "${options['rootsshkeyfile']}" )
     fi
   fi
 }
@@ -595,158 +650,6 @@ view_config () {
   fi
 }
 
-# Function: generate_buildtime_config
-#
-# Generate buildtime configuration
-
-generate_buildtime_config () {
-  check_config
-  patches_dir=$( dirname "${defaults['firstrun']}" )
-  if [ ! -d "${patches_dir}" ]; then
-    information_message "Creating directory ${patches_dir}"
-    execute_command "mkdir -p ${patches_dir}"
-  fi
-  for param in ip netmask gateway dns; do
-    if [ "${options[${param}]}" = "" ]; then
-      warning_message "${param} is not set"
-      do_exit
-    fi
-  done
-  if [ "${options['import']}" = "true" ]; then
-    if [ ! -f "${options['firstrun']}" ]; then
-      warning_message "Import file ${options['firstrun']} does not exist"
-      do_exit
-    fi
-    execute_command "cp ${options['firstrun']} ${defaults['firstrun']}"
-  else
-    information_message "Generating ${defaults['firstrun']}"
-    tee "${defaults['firstrun']}" << FIRSTRUN
-function post_family_tweaks__preset_configs() {
-  display_alert "\$BOARD" "preset configs for rootfs" "info"
-  # Set PRESET_NET_CHANGE_DEFAULTS to 1 to apply any network related settings below
-  echo "PRESET_NET_CHANGE_DEFAULTS=1" > "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Enable WiFi or Ethernet.
-  #      NB: If both are enabled, WiFi will take priority and Ethernet will be disabled.
-  echo "PRESET_NET_ETHERNET_ENABLED=${options['ethernet']}" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_WIFI_ENABLED=${options['wifi']}" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  #Enter your WiFi creds
-  #      SECURITY WARN: Your wifi keys will be stored in plaintext, no encryption.
-  echo "PRESET_NET_WIFI_SSID=\"${options['ssid']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_WIFI_KEY=\"${options['key']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  #      Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
-  echo "PRESET_NET_WIFI_COUNTRYCODE=\"${options['countrycode']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  #If you want to use a static ip, set it here
-  echo "PRESET_NET_USE_STATIC=${options['static']}" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_IP=\"${options['ip']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_MASK=\"${options['netmask']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_GATEWAY=\"${options['gateway']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-  echo "PRESET_NET_STATIC_DNS=\"${options['dns']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset user default shell, you can choose bash or  zsh
-  echo "PRESET_USER_SHELL=\"${options['shell']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
-  echo "PRESET_CONNECT_WIRELESS=\"${options['connectwireless']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
-  echo "SET_LANG_BASED_ON_LOCATION=\"${options['setlang']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset default locale
-  echo "PRESET_LOCALE=\"${options['locale']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset timezone
-  echo "PRESET_TIMEZONE=\"${options['timezone']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset root password
-  echo "PRESET_ROOT_PASSWORD=\"${options['rootpassword']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset username
-  echo "PRESET_USER_NAME=\"${options['username']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset user password
-  echo "PRESET_USER_PASSWORD=\"${options['userpassword']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet
-
-  # Preset user default realname
-  echo "PRESET_DEFAULT_REALNAME=\"${options['realname']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet    
-
-  # Preset user SSH key
-  echo "PRESET_USER_KEY=\"${options['sshkey']}\"" >> "\${SDCARD}"/root/.not_logged_in_yet    
-}
-FIRSTRUN
-  fi
-}
-
-# Function: generate_runtime_config
-#
-# Generate runtime configuration
-generate_runtime_config () {
-  check_config
-  runtime_file="${options['workdir']}/${options['hostname']}${options['runtime']}"
-  check_dir=$( dirname "${runtime_file}" )
-  if [ ! -d "${check_dir}" ]; then
-    execute_command "mkdir -p ${check_dir}"
-  fi
-  information_message "Generating runtime configuration ${runtime_file}"
-  tee "${runtime_file}" << FIRSTRUN
-# Set PRESET_NET_CHANGE_DEFAULTS to 1 to apply any network related settings below
-PRESET_NET_CHANGE_DEFAULTS=1
-# Enable WiFi or Ethernet.
-# NB: If both are enabled, WiFi will take priority and Ethernet will be disabled.
-PRESET_NET_ETHERNET_ENABLED=${options['ethernet']}
-PRESET_NET_WIFI_ENABLED=${options['wifi']}
-
-# Enter your WiFi creds
-# SECURITY WARN: Your wifi keys will be stored in plaintext, no encryption.
-PRESET_NET_WIFI_SSID='${options['ssid']}'
-PRESET_NET_WIFI_KEY='${options['key']}'
-
-# Country code to enable power ratings and channels for your country. eg: GB US DE | https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
-PRESET_NET_WIFI_COUNTRYCODE="${options['countrycode']}"
-
-# If you want to use a static ip, set it here
-PRESET_NET_USE_STATIC=${options['static']}
-PRESET_NET_STATIC_IP="${options['ip']}"
-PRESET_NET_STATIC_MASK="${options['netmask']}"
-PRESET_NET_STATIC_GATEWAY="${options['gateway']}"
-PRESET_NET_STATIC_DNS="${options['dns']}"
-
-# Preset user default shell, you can choose bash or zsh
-PRESET_USER_SHELL="${options['shell']}"
-
-# Set PRESET_CONNECT_WIRELESS=y if you want to connect wifi manually at first login
-PRESET_CONNECT_WIRELESS="${options['connectwireless']}"
-
-# Set SET_LANG_BASED_ON_LOCATION=n if you want to choose "Set user language based on your location?" with "n" at first login
-SET_LANG_BASED_ON_LOCATION="${options['setlang']}"
-
-# Preset default locale
-PRESET_LOCALE="${options['locale']}"
-
-# Preset timezone
-PRESET_TIMEZONE="${options['timezone']}"
-
-# Preset root password
-PRESET_ROOT_PASSWORD="${options['rootpassword']}"
-
-# Preset username
-PRESET_USER_NAME="${options['username']}"
-
-# Preset user password
-PRESET_USER_PASSWORD="${options['userpassword']}"
-
-# Preset user default realname
-PRESET_DEFAULT_REALNAME="${options['realname']}"
-
-# Preset user SSH key
-PRESET_USER_KEY="${options['sshkey']}"
-
-FIRSTRUN
-}
-
 # Function: generate_provisioning_script
 #
 # Generate provisioning script
@@ -760,10 +663,112 @@ generate_provisioning_script () {
   fi
   information_message "Generating provisioning script ${provisioning_script}"
   tee "${provisioning_script}" << PROVISION
-#!/bin/bash
+#!/usr/bin/bash
 echo "Provisioning started"
-apt update && apt install -y ${options['packages']}
-hostnamectl set-hostname ${options['hostname']}
+NIC="${options['nic']}"
+STATIC="${options['static']}"
+BRIDGED="${options['bridged']}"
+BRIDGE="${options['bridge']}"
+NETPLAN="${options['netplan']}"
+DNS="${options['dns']}"
+GATEWAY="${options['gateway']}"
+IP="${options['ip']}"
+CIDR="${options['cidr']}"
+GROUPNAME="${options['groupname']}"
+USERSHELL="${options['usershell']}"
+USERHOME="${options['userhome']}"
+USERID="${options['userid']}"
+USERGROUP="${options['usergroup']}"
+USERGROUPID="${options['usergroupid']}"
+USERNAME="${options['username']}"
+USERPASS="${options['userpassword']}"
+PACKAGES="${options['packages']}"
+USERSSHKEY="${options['usersshkey']}"
+TIMEZONE="${options['timezone']}"
+LOCALE="${options['locale']}
+MAJORREL=\$( lsb_release -r |awk '{print \$2}' |cut -f1 -d. )
+if [ "\${STATIC}" = "true" ]; then
+  if [ "\${NIC}" = "first" ]; then
+    NIC=\$( lshw -class network -short |awk '{print \$2}' |grep ^e |head -1 )
+  fi
+  if [ "\${BRIDGED}" = "true" ]; then
+    echo "network:"                                > "\${NETPLAN}"
+    echo "  ethernets:"                           >> "\${NETPLAN}"
+    echo "    \${NIC}:"                            >> "\${NETPLAN}"
+    echo "      dhcp4: false"                     >> "\${NETPLAN}"
+    echo "  bridges:"                             >> "\${NETPLAN}"
+    echo "    \${BRIDGE}:"                         >> "\${NETPLAN}"
+    echo "      interfaces: [ \${NIC} ]"           >> "\${NETPLAN}"
+    echo "      addresses:"                       >> "\${NETPLAN}"
+  else
+    echo "network:"                                > "\${NETPLAN}"
+    echo "  ethernets:"                           >> "\${NETPLAN}"
+    echo "    \${NIC}:"                            >> "\${NETPLAN}"
+    echo "      dhcp4: false"                     >> "\${NETPLAN}"
+    echo "      addresses:"                       >> "\${NETPLAN}"
+  fi
+  if [[ "\${IP}" =~ "," ]]; then
+    IFS=',' read -r -a ARRAY <<< "\${IP}"
+    for ITEM in "\${ARRAY[@]}"; do
+      echo "        - \${ITEM}/\${CIDR}"            >> "\${NETPLAN}"
+    done
+  else
+    echo "        - \${IP}/\${CIDR}"                >> "\${NETPLAN}"
+  fi
+  echo "      nameservers:"                       >> "\${NETPLAN}"
+  echo "        addresses:"                       >> "\${NETPLAN}"
+  if [[ "\${DNS}" =~ "," ]]; then
+    IFS=',' read -r -a ARRAY <<< "\${DNS}"
+    for ITEM in "\${ARRAY[@]}"; do
+      echo "          - \${ITEM}"                  >> "\${NETPLAN}"
+    done
+  else
+    echo "          - \${DNS}"                     >> "\${NETPLAN}"
+  fi
+  if [ "\${MAJORREL}" -gt 22 ]; then
+    echo "      routes:"                          >> "\${NETPLAN}"
+    echo "        - to: default"                  >> "\${NETPLAN}"
+    echo "          via: \${GATEWAY}"              >> "\${NETPLAN}"
+  else
+    echo "      gateway4: \${GATEWAY}"             >> "\${NETPLAN}"
+  fi
+  echo "  version: 2"                             >> "\${NETPLAN}"
+  chmod 600 "\${NETPLAN}"
+fi
+if [ ! "\${PACKAGES}" = "" ]; then
+  apt update && apt install -y \${PACKAGES}
+fi
+hostnamectl set-hostname \${HOSTNAME}
+if [ "\${USERGROUPID}" = "" ]; then
+  groupadd \${USERGROUP}
+else
+  groupadd -g \${USERGROUPID} \${USERGROUP}
+fi
+if [ "\${USERID}" = "" ]; then
+  useradd -g \${USERGROUP} -s \${USERSHELL} -m -d \${USERHOME} \${USERNAME}
+else
+  useradd -u \${USERID} -g \${USERGROUP} -s \${USERSHELL} -m -d \${USERHOME} \${USERNAME}
+fi
+if [ ! "\${USERPASS}" = "" ]; then
+  echo "\${USERNAME}:\${USERPASS}" | chpasswd
+fi
+if [ ! "\${ROOTPASS}" = "" ]; then
+  echo "root:\${ROOTPASS}" | chpasswd
+fi
+if [ ! "\${USERSSHKEY}" = "" ]; then
+  mkdir -p /home/\${USERNAME}/.ssh
+  chown \${USERNAME}:\${USERGROUP} /home/\${USERNAME}/.ssh
+  chmod 700 /home/\${USERNAME}/.ssh
+  echo "\${USERSSHKEY}" > /home/\${USERNAME}/.ssh/authorized_keys
+  chown \${USERNAME}:\${USERGROUP} /home/\${USERNAME}/.ssh/authorized_keys
+  chmod 600 /home/\${USERNAME}/.ssh/authorized_keys
+fi
+if [ ! "\${TIMEZONE}" = "" ]; then
+  timedatectl set-timezone \${TIMEZONE}
+fi
+if [ ! "\${LOCALE}" = "" ]; then
+  localectl set-locale LANG=\${LOCALE}
+fi
 echo "Provisioning complete"
 
 PROVISION
@@ -794,27 +799,7 @@ compile_image () {
   if [ "${options['manual']}" = "true" ]; then
     execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh"
   else
-    if [ "${options['default']}" = "true" ]; then
-      execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
-    else
-      generate_buildtime_config
-      execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
-    fi
-  fi
-}
-
-# Function: recompile_image
-#
-# Recompile image
-
-recompile_image () {
-  check_config
-  get_compile_flags
-  if [ -f "${options['firstrun']}" ]; then
-    execute_command "export ENABLE_EXTENSIONS=preset-firstrun && cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
-  else
-    warning_message "${options['firstrun']} does not exist"
-    do_exit
+    execute_command "cd ${options['builddir']} && export TERM=${options['term']} && ./compile.sh ${options['flags']}"
   fi
 }
 
@@ -968,7 +953,7 @@ do
     [ ! -e "/dev/\$dev" ] &&  mknod "/dev/\$dev" b \$MAJ \$MIN
 done
 mount \${LOOPDEV}p1 ${mount_dir}
-cp ${options['mountdir']}${options['runtime']} ${mount_dir}${options['runtime']}
+cp ${options['mountdir']}${options['provision']} ${mount_dir}${options['provision']}
 umount ${mount_dir}
 losetup -d \$LOOPDEV
 exit
@@ -991,18 +976,10 @@ execute_docker_script () {
 
 generate_config () {
   actions="$1"
-  if [[ ${actions} =~ run ]] || [[ ${options['type']} =~ run ]]; then
-    generate_runtime_config
+  if [[ ${actions} =~ pro ]]; then
+    generate_provisioning_script
   else
-    if [[ ${actions} =~ build ]] || [[ ${options['type']} =~ build ]]; then
-      generate_buildtime_config
-    else
-      if [[ ${actions} =~ pro ]] || [[ ${options['type']} =~ pro ]]; then
-        generate_provisioning_script
-      else
-        generate_docker_script
-      fi
-    fi
+    generate_docker_script
   fi
 }
 
@@ -1020,13 +997,11 @@ modify_image () {
     do_exit
   fi
   if [ "${options['redo']}" = "false" ]; then
-    generate_runtime_config
     generate_provisioning_script
   fi
   if [ "${os['name']}" = "Linux" ]; then
     mount_image
-    execute_command "cp ${options['workdir']}/${options['hostname']}${options['runtime']} ${options['mountdir']}${options['runtime']}" "sudo"
-    execute_command "cp ${options['workdir']}/${options['hostname']}${options['provision']} ${options['mountdir']}${options['runtime']}" "sudo"
+    execute_command "cp ${options['workdir']}/${options['hostname']}${options['provision']} ${options['mountdir']}${options['provision']}" "sudo"
     unmount_image
   else
     generate_docker_script
@@ -1069,7 +1044,7 @@ write_image () {
 # Handle actions
 
 process_actions () {
-  actions="$1"
+  actions="${1//--}"
   case $actions in
     compile*)             # action : Compile image
       compile_image
@@ -1106,10 +1081,6 @@ process_actions () {
       ;;
     printdefaults)        # action : Print defaults
       print_defaults
-      exit
-      ;;
-    recompile*)           # action : Recompile image - Use existing config
-      recompile_image
       exit
       ;;
     shellcheck)           # action : Shellcheck script
@@ -1174,9 +1145,22 @@ while test $# -gt 0; do
       options['branch']="$2"
       shift 2
       ;;
+    --bridged)                # switch : Enable network bridge
+      options['bridged']="true"
+      shift
+      ;;
+    --nobridged)              # switch : Disable network bridge
+      options['bridged']="false"
+      shift
+      ;;
     --check*)                 # switch : Run checks
       actions_list+=("check")
       shift
+      ;;
+    --cidr*)                  # switch : CIDR
+      check_value "$1" "$2"
+      options['cidr']="$2"
+      shift 2
       ;;
     --compile*)               # switch : Compile image
       actions_list+=("compile")
@@ -1184,10 +1168,6 @@ while test $# -gt 0; do
       ;;
     --config*)                # switch : Configure kernel
       options['configure']="yes"
-      shift
-      ;;
-    --connectwi*)             # switch : Connect to wireless
-      options['connectwireless']="yes"
       shift
       ;;
     --container*)             # switch : Container
@@ -1219,12 +1199,11 @@ while test $# -gt 0; do
       shift 2
       ;;
     --dhcp*)                  # switch : Enable DHCP
-      options['static']="0"
+      options['static']="false"
       shift
       ;;
     --dns*)                   # switch : DNS Server
-      options['static']="1"
-      options['ethernet']="1"
+      options['static']="true"
       check_value "$1" "$2"
       options['dns']="$2"
       shift 2
@@ -1239,10 +1218,6 @@ while test $# -gt 0; do
       ;;
     --dryrun)                 # switch : Enable dryrun mode
       options['dryrun']="true"
-      shift
-      ;;
-    --ethernet)               # switch : Enable Ethernet
-      options['ethernet']="1"
       shift
       ;;
     --expert*)                # switch : Expert mode
@@ -1268,20 +1243,34 @@ while test $# -gt 0; do
       shift
       ;;
     --gateway*)               # switch : Gateway
-      options['static']="1"
-      options['ethernet']="1"
+      options['static']="true"
       check_value "$1" "$2"
       options['gateway']="$2"
       shift 2
       ;;
     --gen*)                   # switch : Generate configuration
-      actions_list+=("generate")
+      actions_list+=("$1")
       shift
+      ;;
+    --group|--usergroup)      # switch : User Group
+      check_value "$1" "$2"
+      options['usergroup']="$2"
+      shift 2
+      ;;
+    --groupid|--usergroupid)  # switch : User Group ID
+      check_value "$1" "$2"
+      options['usergroupid']="$2"
+      shift 2
       ;;
     --help|-h)                # switch : Print help information
       print_help
       shift
       exit
+      ;;
+    --home*|--userhome*)      # switch : User Home directory
+      check_value "$1" "$2"
+      options['homedir']="$2"
+      shift 2
       ;;
     --hostname)               # switch : Hostname
       check_value "$1" "$2"
@@ -1298,15 +1287,9 @@ while test $# -gt 0; do
       shift 2
       ;;
     --ip*)                    # switch : IP Address
-      options['static']="1"
-      options['ethernet']="1"
+      options['static']="true"
       check_value "$1" "$2"
       options['ip']="$2"
-      shift 2
-      ;;
-    --key)                    # switch : WiFi key
-      check_value "$1" "$2"
-      options['key']="$2"
       shift 2
       ;;
     --list)                   # switch : List - e.g. board
@@ -1347,11 +1330,24 @@ while test $# -gt 0; do
       shift
       ;;
     --netmask*)               # switch : Subnet Mask
-      options['static']="1"
-      options['ethernet']="1"
+      options['static']="true"
       check_value "$1" "$2"
       options['netmask']="$2"
       shift 2
+      ;;
+    --netplan*)               # switch : Netplan
+      check_value "$1" "$2"
+      options['netplan']="$2"
+      shift 2
+      ;;
+    --nic*)                   # switch : Network interface
+      check_value "$1" "$2"
+      options['nic']="$2"
+      shift 2
+      ;;
+    --firstnic)               # switch : Use first network interface
+      options['nic']="first"
+      shift
       ;;
     --option*)                # switch : Action to perform
       check_value "$1" "$2"
@@ -1373,14 +1369,6 @@ while test $# -gt 0; do
       options['realname']="$2"
       shift 2
       ;;
-    --recompile*)             # switch : Recompile image - Use existing config
-      actions_list+=("recompile")
-      shift
-      ;;
-    --redo)                   # switch : Redo configuration - Use last generated config
-      options['redo']="true"
-      shift
-      ;;
     --release*)               # switch : Release
       check_value "$1" "$2"
       options['release']="$2"
@@ -1399,32 +1387,35 @@ while test $# -gt 0; do
       actions_list+=("shellcheck")
       shift
       ;;
-    --shell)                  # switch : User shell
+    --shell|--usershell)      # switch : User shell
       check_value "$1" "$2"
-      options['shell']="$2"
+      options['usershell']="$2"
       shift 2
       ;;
-    --sshkey)                 # switch : SSH key
+    --sshkey|--usersshkey)    # switch : SSH key
       check_value "$1" "$2"
-      options['sshkey']="$2"
+      options['usersshkey']="$2"
       shift 2
       ;;
-    --sshkeyfile)             # switch : SSH key file
+    --sshkeyfile|--usersshkeyfile)             # switch : SSH key file
       check_value "$1" "$2"
-      options['sshkeyfile']="$2"
-      shift 2
-      ;;
-    --ssid)                   # switch : WiFi SSID
-      check_value "$1" "$2"
-      options['ssid']="$2"
+      options['usersshkeyfile']="$2"
       shift 2
       ;;
     --static*)                # switch : Enable static IP
-      options['static']="1"
+      options['static']="true"
       shift
       ;;
     --strict)                 # switch : Enable strict mode
       options['strict']="true"
+      shift
+      ;;
+    --sudopass*)              # switch : Sudo requires password
+      options['sudopassword']="true"
+      shift
+      ;;
+    --nosudopass*)            # switch : Sudo doesn't require password
+      options['sudopassword']="false"
       shift
       ;;
     --term*)                  # switch : Terminal type
@@ -1453,6 +1444,11 @@ while test $# -gt 0; do
       shift 2
       exit
       ;;
+    --userid)                 # switch : User ID
+      check_value "$1" "$2"
+      options['userid']="$2"
+      shift 2
+      ;;
     --username)               # switch : Username
       check_value "$1" "$2"
       options['username']="$2"
@@ -1473,10 +1469,6 @@ while test $# -gt 0; do
       ;;
     --view*)                  # switch - View config
       actions_list+=("view")
-      shift
-      ;;
-    --wifi)                   # switch : Enable WiFi
-      options['wifi']="1"
       shift
       ;;
     --workdir)                # switch : Work directory

@@ -8,7 +8,7 @@ Cli for Armbian Linux Image COnfiguration
 Version
 -------
 
-1.2.3
+1.4.9
 
 Introduction
 ------------
@@ -36,15 +36,39 @@ The goals of this script are to:
 
 Provide a command line processor that:
 
-- Can configure network and other settings in the Armbian image.
+- Can automate the configuration of network and other settings in Armbian images.
+- Can build Armbian images.
+- Can modify existing Armbian images.
 
 Status
 ------
 
-Currently the custom build (i.e. setting IP etc) is working for modifying existing images.
-Doing a custom build with the compile option still needs work.
-As such it is recommended to use the compile option to generate the image, 
-and then run the modify option on the image created if you want a custom build.
+I was unable to get consistent results using the method of setting
+evironment variables in /root/.not_logged_in_yet, as such the script
+uses the /root/provisioning.sh method. This allows for more consistent
+results, and more control over the configuration process.
+
+Current provisioning script features include:
+- Create user account
+- Set user password
+- Set root password
+- Set user group
+- Set user group ID
+- Set user shell
+- Create user home directory
+- Install user SSH keys
+- Set hostname
+- Set timezone
+- Set locale
+- Set real name
+- Set netmask
+- Set gateway
+- Set DNS
+- Set locale
+
+The script works on both Linux and MacOS.
+On Linux it uses the native tools to mount and modify the image.
+On MacOS it uses Docker to mount and modify the image.
 
 Requirements
 ------------
@@ -55,6 +79,7 @@ Requirements
 - qemu-system-riscv
 - binfmt-support
 - qemu-user-binfmt
+- ipcalc
 
 Usage
 -----
@@ -103,10 +128,10 @@ Manual compile:
 ./calico.sh --complile --manual
 ```
 
-Configure compile for orangepipc board with IP, gateway, DNS, etc:
+Configure compile for orangepipc board:
 
 ```bash
-./calico.sh --compile --board orangepipc --ip 192.168.1.100 --gateway 192.168.1.1 --dns 8.8.8.8 --netmask 255.255.255.0
+./calico.sh --compile --board orangepipc
 ```
 
 Modify existing image's IP, gateway, DNS, etc:
